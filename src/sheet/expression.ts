@@ -65,7 +65,6 @@ export function extractHoistsAndBlocks(
   variableHoists: Extract<Expression, { type: "variableHoist" }>[];
   blocks: Block[];
 } {
-  console.log("======");
   const variableHoists: Extract<Expression, { type: "variableHoist" }>[] = [];
   const blocks: Block[] = [];
 
@@ -109,9 +108,19 @@ export function extractHoistsAndBlocks(
           continue;
         }
 
-        const { cell: result, blocks, endBlocks } = parseCell(cell);
+        const {
+          cell: result,
+          blocks,
+          endBlocks,
+          jumpTo,
+        } = parseCell(cell, col, row);
         innerBlocks.push(...blocks);
-        console.log(endBlocks);
+
+        if (jumpTo) {
+          // jumpTo is here to prevent us from reading the same cells twice
+          col = jumpTo.col;
+          row = jumpTo.row;
+        }
 
         if (!result) {
           col++;
@@ -163,8 +172,19 @@ export function extractHoistsAndBlocks(
           continue;
         }
 
-        const { cell: result, blocks, endBlocks } = parseCell(cell);
+        const {
+          cell: result,
+          blocks,
+          endBlocks,
+          jumpTo,
+        } = parseCell(cell, col, row);
         innerBlocks.push(...blocks);
+
+        if (jumpTo) {
+          // jumpTo is here to prevent us from reading the same cells twice
+          col = jumpTo.col;
+          row = jumpTo.row;
+        }
 
         if (!result) {
           row++;
@@ -202,21 +222,29 @@ export function extractHoistsAndBlocks(
     );
   }
 
-  function parseCell(parsedExpression: ExpressionCell): {
+  function parseCell(
+    parsedExpression: ExpressionCell,
+    col: number,
+    row: number,
+  ): {
     cell: ExpressionCell;
     blocks: Block[];
     endBlocks: {
       identifier: string;
       index: number;
     }[];
+    jumpTo?: { col: number; row: number };
   } {
-    console.log(`parseCell with cell ${JSON.stringify(parsedExpression)}`);
+    console.log(
+      `parseCell with cell ${JSON.stringify(parsedExpression)} at col ${col} row ${row}`,
+    );
     const blocks: Block[] = [];
     const endBlocks: {
       identifier: string;
       index: number;
     }[] = [];
     const resultingContent: ExpressionCell = [];
+    let jumpTo: { col: number; row: number } | undefined;
     let parsedABlock = false;
 
     for (let index = 0; index < parsedExpression.length; index++) {
@@ -233,13 +261,12 @@ export function extractHoistsAndBlocks(
         if (parsedABlock)
           throw new Error(
             "cannot have two startBlock expressions in the same cell, this" +
-            " is a limitation of the current implementation.",
+              " is a limitation of the current implementation.",
           );
 
-        const { block, jumpTo } = parseBlock(item, col, row);
-        col = jumpTo.col;
-        row = jumpTo.row;
+        const { block, jumpTo: blockJumpTo } = parseBlock(item, col, row);
 
+        jumpTo = blockJumpTo;
         blocks.push({ ...block, start: { ...block.start, startsAt: index } });
         parsedABlock = true;
       } else if (item.type === "blockEnd") {
@@ -268,7 +295,7 @@ export function extractHoistsAndBlocks(
       `parseCell ended with ${JSON.stringify(resultingContent)}, blocks: ${blocks.map((b) => b.identifier).join(",")}, endBlocks: ${endBlocks.map((e) => e.identifier).join(",")}`,
     );
 
-    return { cell: resultingContent, blocks, endBlocks };
+    return { cell: resultingContent, blocks, endBlocks, jumpTo };
   }
 
   while (row <= sheetBounds.rowBound) {
@@ -279,8 +306,18 @@ export function extractHoistsAndBlocks(
         continue;
       }
 
-      const { cell: result, blocks: newBlocks } = parseCell(cell);
-      if (result) expressionSheet.setCell(col, row, result);
+      const {
+        cell: result,
+        blocks: newBlocks,
+        jumpTo,
+      } = parseCell(cell, col, row);
+      expressionSheet.setCell(col, row, result);
+      if (jumpTo) {
+        // jumpTo is here to prevent us from reading the same cells twice
+        col = jumpTo.col;
+        row = jumpTo.col;
+      }
+
       blocks.push(...newBlocks);
 
       col++;
