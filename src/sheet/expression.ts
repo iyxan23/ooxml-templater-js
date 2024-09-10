@@ -7,21 +7,55 @@ type Block = {
 
   direction: "col" | "row";
 
-  // counted per col/row depending on the identifier
-  blockContent: ExpressionCell[];
-  lastCellAfterBlockEnd: ExpressionCell; // the content after block end
+  innerBlocks: Block[];
 
   start: {
     col: number;
     row: number;
+
+    // inclusive index of an item in an ExpressionCell where this block starts
+    // e.g. ['hello', { blockStart }, 'world'] will have a `block.start.startsAt = 1`
+    // because blockStart will be removed, the part that will be repeated will be
+    // ['hello', 'world'] <- 'world' will be repeated
+    startsAt: number;
   };
   end: {
     col: number;
     row: number;
+
+    // inclusive index of an item in an ExpressionCell where this block ends
+    // e.g. ['hello', { blockEnd }, 'world'] will have a `block.start.endsAt = 1`
+    // because blockEnd will be removed, the part that will be repeated will be
+    // ['hello', 'world'] <- 'hello' will be repeated
+    endsAt: number;
   };
 };
 
-export function collectHoistsAndLabelBlocks(
+type NestedOmit<
+  Schema,
+  Path extends string,
+> = Path extends `${infer Head}.${infer Tail}`
+  ? Head extends keyof Schema
+    ? {
+        [K in keyof Schema]: K extends Head
+          ? NestedOmit<Schema[K], Tail>
+          : Schema[K];
+      }
+    : Schema
+  : Omit<Schema, Path>;
+
+// This is stage 1 of the expression interpreter
+//
+// What this function does is that it:
+//
+//  1. extracts `[hoist .. ..]` expressions off of the given sheet (removes it
+//     by mutating the given sheet), and
+//
+//  2. extracts `[#block .. ..]` and `[/#block]` expressions off of the given
+//     sheet (removing by mutating it)
+//
+// then returns both the hoists and the blocks that exists in this sheet
+export function extractHoistsAndBlocks(
   expressionSheet: Sheet<ExpressionCell>,
 ): {
   variableHoists: Extract<Expression, { type: "variableHoist" }>[];
@@ -36,10 +70,18 @@ export function collectHoistsAndLabelBlocks(
 
   function parseBlock(
     blockStart: Extract<Expression, { type: "blockStart" }>,
-  ): Block {
+    col: number,
+    row: number,
+  ): {
+    // startsAt
+    block: NestedOmit<Block, "start.startsAt">;
+    jumpTo: { col: number; row: number };
+  } {
+    console.log(
+      `parseBlock started at col ${col} row ${row}: ${blockStart.identifier}\n`,
+    );
     const previous = { col, row };
-    const blockContent = [];
-    let lastCellAfterBlockEnd = [];
+    const innerBlocks: Block[] = [];
 
     if (blockStart.identifier === "repeatRow") {
       col++;
@@ -62,53 +104,35 @@ export function collectHoistsAndLabelBlocks(
           continue;
         }
 
-        const result = parseCell(cell);
+        const { cell: result, blocks, endBlocks } = parseCell(cell);
+        innerBlocks.push(...blocks);
+
         if (result) {
-          const indexOfBlockEnd = result.findIndex(
-            (item) => typeof item !== "string" && item.type === "blockEnd",
+          const endBlock = endBlocks.find(
+            (b) => b.identifier === blockStart.identifier,
           );
+          if (!endBlock) continue;
 
-          if (indexOfBlockEnd === -1) {
-            expressionSheet.setCell(col, row, result);
-            blockContent.push(result);
-            col++;
-            continue;
-          }
-
-          // we have a block end!
-          const blockEnd = result[indexOfBlockEnd] as unknown as Extract<
-            Expression,
-            { type: "blockEnd" }
-          >;
-
-          if (blockEnd.identifier !== blockStart.identifier) {
-            // apparently not ours
-            console.warn(
-              `unexpectedly encountered a block end with different identifier. block start is ${blockStart.identifier}, block end is ${blockEnd.identifier}. skipping.`,
-            );
-
-            // continue
-            expressionSheet.setCell(col, row, result);
-            blockContent.push(result);
-            col++;
-            continue;
-          }
-
-          const contentBefore = result.slice(0, indexOfBlockEnd);
-          if (contentBefore) blockContent.push();
-          lastCellAfterBlockEnd = result.slice(indexOfBlockEnd + 1);
+          console.log(`block ${blockStart.identifier} ended`);
 
           return {
-            identifier: blockStart.identifier,
-            arg: repeatCountExpr,
-            indexVariableIdentifier,
-            direction: "row",
-            blockContent,
-            lastCellAfterBlockEnd,
-            start: { ...previous },
-            end: { col, row },
+            block: {
+              identifier: blockStart.identifier,
+              innerBlocks,
+              arg: repeatCountExpr,
+              indexVariableIdentifier,
+              direction: "row",
+              start: { ...previous },
+              end: {
+                col: endBlock.col,
+                row: endBlock.row,
+                endsAt: endBlock.index,
+              },
+            },
+            jumpTo: { col, row },
           };
         }
+
         col++;
       }
     } else if (blockStart.identifier === "repeatCol") {
@@ -131,59 +155,32 @@ export function collectHoistsAndLabelBlocks(
           row++;
           continue;
         }
+        const { cell: result, blocks, endBlocks } = parseCell(cell);
+        innerBlocks.push(...blocks);
 
-        const result = parseCell(cell);
         if (result) {
-          const indexOfBlockEnd = result.findIndex(
-            (item) => typeof item !== "string" && item.type === "blockEnd",
+          const endBlock = endBlocks.find(
+            (b) => b.identifier === blockStart.identifier,
           );
+          if (!endBlock) continue;
 
-          if (indexOfBlockEnd === -1) {
-            expressionSheet.setCell(col, row, result);
-            blockContent.push(result);
-            row++;
-            continue;
-          }
-
-          // we have a block end!
-          const blockEnd = result[indexOfBlockEnd] as unknown as Extract<
-            Expression,
-            { type: "blockEnd" }
-          >;
-
-          if (blockEnd.identifier !== blockStart.identifier) {
-            // apparently not ours
-            console.warn(
-              `unexpectedly encountered a block end with different identifier. block start is ${blockStart.identifier}, block end is ${blockEnd.identifier}. skipping.`,
-            );
-
-            // continue
-            expressionSheet.setCell(col, row, result);
-            blockContent.push(result);
-            row++;
-            continue;
-          }
-
-          const contentBefore = result.slice(0, indexOfBlockEnd);
-          if (contentBefore) blockContent.push();
-          lastCellAfterBlockEnd = result.slice(indexOfBlockEnd + 1);
-
-          const end = { col, row };
-
-          // get back to the previous col & row and + 1
-          const nextRow = previous.col + 1 >= sheetBounds.colBound;
-          col = nextRow ? 0 : previous.col + 1;
-          row = nextRow ? previous.row + 1 : previous.row;
+          console.log(`block ${blockStart.identifier} ended`);
 
           return {
-            identifier: blockStart.identifier,
-            arg: repeatCountExpr,
-            indexVariableIdentifier,
-            direction: "col",
-            blockContent,
-            lastCellAfterBlockEnd,
-            start: { ...previous },
-            end,
+            block: {
+              identifier: blockStart.identifier,
+              innerBlocks,
+              arg: repeatCountExpr,
+              indexVariableIdentifier,
+              direction: "col",
+              start: { ...previous },
+              end: {
+                col: endBlock.col,
+                row: endBlock.row,
+                endsAt: endBlock.index,
+              },
+            },
+            jumpTo: previous,
           };
         }
 
@@ -196,10 +193,23 @@ export function collectHoistsAndLabelBlocks(
     );
   }
 
-  function parseCell(parsedExpression: ExpressionCell): ExpressionCell {
-    console.log(
-      `parseCell started at col ${col} row ${row}: ${parsedExpression.map((s) => JSON.stringify(s)).join("")}`,
-    );
+  function parseCell(parsedExpression: ExpressionCell): {
+    cell: ExpressionCell;
+    blocks: Block[];
+    endBlocks: {
+      identifier: string;
+      col: number;
+      row: number;
+      index: number;
+    }[];
+  } {
+    const blocks: Block[] = [];
+    const endBlocks: {
+      identifier: string;
+      col: number;
+      row: number;
+      index: number;
+    }[] = [];
     const resultingContent: ExpressionCell = [];
 
     for (let index = 0; index < parsedExpression.length; index++) {
@@ -212,35 +222,35 @@ export function collectHoistsAndLabelBlocks(
 
       if (item.type === "variableHoist") {
         variableHoists.push(item);
-
-        // merge the string at the front/back together
-        const prevElement = resultingContent[resultingContent.length - 1];
-        const nextElement = parsedExpression[index + 1];
-
-        if (
-          index > 0 &&
-          typeof prevElement === "string" &&
-          typeof nextElement === "string"
-        ) {
-          resultingContent[resultingContent.length - 1] =
-            `${prevElement}${nextElement}`;
-          index++; // skip the nextElement
-        }
-
-        continue;
       } else if (item.type === "blockStart") {
-        const block = parseBlock(item);
-        blocks.push(block);
-        continue;
+        const { block, jumpTo } = parseBlock(item, col, row);
+        col = jumpTo.col;
+        row = jumpTo.row;
+
+        blocks.push({ ...block, start: { ...block.start, startsAt: index } });
       } else if (item.type === "blockEnd") {
+        endBlocks.push({ identifier: item.identifier, col, row, index });
+      } else {
         resultingContent.push(item);
         continue;
       }
 
-      resultingContent.push(item);
+      // merge the string at the front/back together
+      const prevElement = resultingContent[resultingContent.length - 1];
+      const nextElement = parsedExpression[index + 1];
+
+      if (
+        index > 0 &&
+        typeof prevElement === "string" &&
+        typeof nextElement === "string"
+      ) {
+        resultingContent[resultingContent.length - 1] =
+          `${prevElement}${nextElement}`;
+        index++; // skip the nextElement
+      }
     }
 
-    return resultingContent;
+    return { cell: resultingContent, blocks, endBlocks };
   }
 
   while (row <= sheetBounds.rowBound) {
@@ -251,8 +261,9 @@ export function collectHoistsAndLabelBlocks(
         continue;
       }
 
-      const result = parseCell(cell);
+      const { cell: result, blocks: newBlocks } = parseCell(cell);
       if (result) expressionSheet.setCell(col, row, result);
+      blocks.push(...newBlocks);
 
       col++;
     }

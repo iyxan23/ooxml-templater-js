@@ -1,4 +1,4 @@
-import { collectHoistsAndLabelBlocks, ExpressionCell, parseExpressionCell } from "./expression";
+import { extractHoistsAndBlocks, ExpressionCell, parseExpressionCell } from "./expression";
 import { Sheet } from "./sheet";
 
 interface TemplatableCell {
@@ -31,7 +31,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     const parsedExpressions = this.parseExpressions();
     // @ts-expect-error will be used later
     const { variableHoists, blockHoists } =
-      collectHoistsAndLabelBlocks(parsedExpressions);
+      extractHoistsAndBlocks(parsedExpressions);
 
     // find hoists and collect them
     // and also match some blockStart and blockEnds
