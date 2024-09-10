@@ -34,50 +34,6 @@ export function collectHoistsAndLabelBlocks(
   let row = 0;
   let col = 0;
 
-  function parseCell(parsedExpression: ExpressionCell): ExpressionCell {
-    const resultingContent: ExpressionCell = [];
-
-    for (let index = 0; index < parsedExpression.length; index++) {
-      const item = parsedExpression[index]!;
-
-      if (typeof item !== "object") {
-        resultingContent.push(item);
-        continue;
-      }
-
-      if (item.type === "variableHoist") {
-        variableHoists.push(item);
-
-        // merge the string at the front/back together
-        const prevElement = resultingContent[resultingContent.length - 1];
-        const nextElement = parsedExpression[index + 1];
-
-        if (
-          index > 0 &&
-          typeof prevElement === "string" &&
-          typeof nextElement === "string"
-        ) {
-          resultingContent[resultingContent.length - 1] =
-            `${prevElement}${nextElement}`;
-          index++; // skip the nextElement
-        }
-
-        continue;
-      } else if (item.type === "blockStart") {
-        const block = parseBlock(item);
-        blocks.push(block);
-        continue;
-      } else if (item.type === "blockEnd") {
-        resultingContent.push(item);
-        continue;
-      }
-
-      resultingContent.push(item);
-    }
-
-    return resultingContent;
-  }
-
   function parseBlock(
     blockStart: Extract<Expression, { type: "blockStart" }>,
   ): Block {
@@ -238,6 +194,53 @@ export function collectHoistsAndLabelBlocks(
     throw new Error(
       `block with identifier \`${blockStart.identifier}\` at col ${previous.col}, row ${previous.row} is not closed`,
     );
+  }
+
+  function parseCell(parsedExpression: ExpressionCell): ExpressionCell {
+    console.log(
+      `parseCell started at col ${col} row ${row}: ${parsedExpression.map((s) => JSON.stringify(s)).join("")}`,
+    );
+    const resultingContent: ExpressionCell = [];
+
+    for (let index = 0; index < parsedExpression.length; index++) {
+      const item = parsedExpression[index]!;
+
+      if (typeof item !== "object") {
+        resultingContent.push(item);
+        continue;
+      }
+
+      if (item.type === "variableHoist") {
+        variableHoists.push(item);
+
+        // merge the string at the front/back together
+        const prevElement = resultingContent[resultingContent.length - 1];
+        const nextElement = parsedExpression[index + 1];
+
+        if (
+          index > 0 &&
+          typeof prevElement === "string" &&
+          typeof nextElement === "string"
+        ) {
+          resultingContent[resultingContent.length - 1] =
+            `${prevElement}${nextElement}`;
+          index++; // skip the nextElement
+        }
+
+        continue;
+      } else if (item.type === "blockStart") {
+        const block = parseBlock(item);
+        blocks.push(block);
+        continue;
+      } else if (item.type === "blockEnd") {
+        resultingContent.push(item);
+        continue;
+      }
+
+      resultingContent.push(item);
+    }
+
+    return resultingContent;
   }
 
   while (row <= sheetBounds.rowBound) {
