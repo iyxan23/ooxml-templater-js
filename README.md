@@ -1,5 +1,7 @@
 <h1 align=center><pre>ooxml-templater-js</pre></h1>
 
+[![Node.js CI](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/node.js.yml/badge.svg)](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/node.js.yml)
+
 No-nonsense minimally invasive docx and xlsx templater written in pure
 typescript, featuring a functional language.
 
