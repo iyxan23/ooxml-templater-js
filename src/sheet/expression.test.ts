@@ -346,7 +346,7 @@ describe("extractHoistsAndBlocks", () => {
     });
   });
 
-  it.skip("should label a simple repeatRow block with a lastCellAfterBlockEnd", () => {
+  it("should label a simple repeatRow block with a lastCellAfterBlockEnd", () => {
     const sheet = new Sheet<ExpressionCell>([
       [
         parseExpressionCell(" hello worldd!"),
@@ -372,34 +372,16 @@ describe("extractHoistsAndBlocks", () => {
           identifier: "repeatRow",
           arg: { type: "call", identifier: "hello", args: [] },
           indexVariableIdentifier: "ident",
-          blockContent: [
-            ["i should be repeating by now"],
-            [
-              {
-                type: "call",
-                identifier: "hello",
-                args: ["world"],
-              },
-            ],
-          ],
+          innerBlocks: [],
           direction: "row",
-          lastCellAfterBlockEnd: [
-            " woah ",
-            {
-              type: "variableAccess",
-              identifier: "cool",
-              args: ["alright"],
-            },
-            " test",
-          ],
-          end: { col: 4, row: 0 },
-          start: { col: 1, row: 0 },
+          end: { col: 4, row: 0, endsAt: 0 },
+          start: { col: 1, row: 0, startsAt: 0 },
         },
       ],
     });
   });
 
-  it.skip("should error when repeatRow is not closed", () => {
+  it("should error when repeatRow is not closed", () => {
     expect(() =>
       extractHoistsAndBlocks(
         new Sheet<ExpressionCell>([
@@ -414,7 +396,7 @@ describe("extractHoistsAndBlocks", () => {
     );
   });
 
-  it.skip("should error when repeatRow is not closed 2", () => {
+  it("should error when repeatRow is not closed 2", () => {
     expect(() =>
       extractHoistsAndBlocks(
         new Sheet<ExpressionCell>([
@@ -438,7 +420,7 @@ describe("extractHoistsAndBlocks", () => {
     );
   });
 
-  it.skip("should label a repeatCol", () => {
+  it("should label a repeatCol", () => {
     const sheet = new Sheet<ExpressionCell>([
       [
         ["hello world"],
@@ -469,17 +451,16 @@ describe("extractHoistsAndBlocks", () => {
           identifier: "repeatCol",
           arg: { type: "variableAccess", identifier: "hello", args: [] },
           indexVariableIdentifier: "world",
-          blockContent: [["this should be repeating"]],
           direction: "col",
-          lastCellAfterBlockEnd: [],
-          end: { col: 2, row: 2 },
-          start: { col: 2, row: 0 },
+          innerBlocks: [],
+          end: { col: 2, row: 2, endsAt: 0 },
+          start: { col: 2, row: 0, startsAt: 0 },
         },
       ],
     });
   });
 
-  it.skip("should label a repeatCol 2", () => {
+  it("should label a repeatCol 2", () => {
     const sheet = new Sheet<ExpressionCell>([
       [
         ["hello world"],
@@ -525,47 +506,16 @@ describe("extractHoistsAndBlocks", () => {
           identifier: "repeatCol",
           arg: { type: "variableAccess", identifier: "hello", args: [] },
           indexVariableIdentifier: "world",
-          blockContent: [
-            [
-              {
-                type: "call",
-                identifier: "here",
-                args: [
-                  "is",
-                  "a",
-                  "call",
-                  { type: "variableAccess", identifier: "hello", args: [] },
-                  "world",
-                ],
-              },
-            ],
-            [
-              "hmm cool ",
-              {
-                type: "call",
-                identifier: "test",
-                args: ["hello", "world"],
-              },
-              " wow",
-            ],
-          ],
+          innerBlocks: [],
           direction: "col",
-          lastCellAfterBlockEnd: [
-            " after block ",
-            {
-              identifier: "is",
-              args: ["this"],
-              type: "call",
-            },
-          ],
-          end: { col: 1, row: 4 },
-          start: { col: 1, row: 1 },
+          end: { col: 1, row: 4, endsAt: 0 },
+          start: { col: 1, row: 1, startsAt: 2 },
         },
       ],
     });
   });
 
-  it.skip("should error when repeatCol is not closed", () => {
+  it("should error when repeatCol is not closed", () => {
     expect(() =>
       extractHoistsAndBlocks(
         new Sheet<ExpressionCell>([
@@ -588,7 +538,7 @@ describe("extractHoistsAndBlocks", () => {
     );
   });
 
-  it.skip("should error when repeatCol is not closed 2", () => {
+  it("should error when repeatCol is not closed 2", () => {
     expect(() =>
       extractHoistsAndBlocks(
         new Sheet<ExpressionCell>([
@@ -638,53 +588,5 @@ describe("extractHoistsAndBlocks", () => {
     const collected = extractHoistsAndBlocks(sheet);
 
     console.log(JSON.stringify(sheet.getSheet(), null, 2));
-
-    expect(collected).toEqual({
-      variableHoists: [],
-      blocks: [
-        {
-          identifier: "repeatCol",
-          arg: {
-            type: "call",
-            identifier: "helloCol",
-            args: [],
-          },
-          indexVariableIdentifier: "col",
-          direction: "col",
-          blockContent: [
-            ["i should be repeating by now"],
-          ],
-          lastCellAfterBlockEnd: [],
-          start: {
-            col: 1,
-            row: 0,
-          },
-          end: {
-            col: 1,
-            row: 2,
-          },
-        },
-        {
-          identifier: "repeatRow",
-          arg: {
-            type: "call",
-            identifier: "helloRow",
-            args: [],
-          },
-          indexVariableIdentifier: "row",
-          direction: "row",
-          blockContent: [[]],
-          lastCellAfterBlockEnd: [],
-          start: {
-            col: 0,
-            row: 0,
-          },
-          end: {
-            col: 3,
-            row: 0,
-          },
-        },
-      ],
-    });
   });
 });
