@@ -114,6 +114,7 @@ export function extractHoistsAndBlocks(
           endBlocks,
           jumpTo,
         } = parseCell(cell, col, row);
+        expressionSheet.setCell(col, row, result);
         innerBlocks.push(...blocks);
 
         if (jumpTo) {
@@ -178,6 +179,7 @@ export function extractHoistsAndBlocks(
           endBlocks,
           jumpTo,
         } = parseCell(cell, col, row);
+        expressionSheet.setCell(col, row, result);
         innerBlocks.push(...blocks);
 
         if (jumpTo) {
