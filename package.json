@@ -1,0 +1,51 @@
+{
+  "name": "ooxml-templater",
+  "version": "0.0.1",
+  "description": "no-nonsense docx and xlsx templater",
+  "scripts": {
+    "build": "npx rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
+    "dev": "npm run build -- --watch",
+    "test": "vitest"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "typings": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyxan23/ooxml-templater-js.git"
+  },
+  "keywords": [
+    "ooxml",
+    "templater",
+    "parser"
+  ],
+  "author": "iyxan23",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/iyxan23/ooxml-templater-js/issues"
+  },
+  "homepage": "https://github.com/iyxan23/ooxml-templater-js#readme",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@types/node": "^22.1.0",
+    "prettier": "^3.3.3",
+    "rollup": "^4.20.0",
+    "rollup-plugin-delete": "^2.0.0",
+    "rollup-plugin-node-externals": "^7.1.2",
+    "rollup-plugin-swc3": "^0.11.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5",
+    "vitest-mock-extended": "^2.0.0"
+  },
+  "sideEffects": false
+}

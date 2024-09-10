@@ -1,0 +1,52 @@
+{
+  "name": "@nextrans/server",
+  "version": "0.0.1",
+  "description": "A midtrans client implementation for Next.js applications",
+  "scripts": {
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "typings": "dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "./transaction": {
+      "require": "./dist/transaction.js",
+      "types": "./dist/transaction.d.ts",
+      "import": "./dist/transaction.mjs",
+      "default": "./dist/transaction.mjs"
+    },
+    "./snap": {
+      "require": "./dist/snap/index.js",
+      "types": "./dist/snap/index.d.ts",
+      "import": "./dist/snap/index.mjs",
+      "default": "./dist/snap/index.mjs"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyxan23/nextrans.git"
+  },
+  "keywords": [
+    "nextjs",
+    "payment",
+    "payment-gateway",
+    "midtrans",
+    "client"
+  ],
+  "peerDependencies": {
+    "zod": "^3.23.8"
+  },
+  "author": "iyxan23",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/iyxan23/nextrans/issues"
+  },
+  "homepage": "https://github.com/iyxan23/nextrans#readme",
+  "sideEffects": false
+}
