@@ -71,12 +71,6 @@ function lib({ input, packageDir }: Options): RollupOptions {
         tsconfig: false,
         jsc: {
           target: "es2020",
-          transform: {
-            react: {
-              useBuiltins: true,
-            },
-          },
-          externalHelpers: true,
         },
       }),
     ],

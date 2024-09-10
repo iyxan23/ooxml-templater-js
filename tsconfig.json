@@ -2,11 +2,7 @@
   "compilerOptions": {
     "module": "esnext",
     "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable",
-      "ES2018.AsyncGenerator",
-      "ES2018.AsyncIterable"
+      "esnext"
     ],
     "baseUrl": ".",
     "target": "es2020",
@@ -20,11 +16,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "moduleResolution": "node",
-    "jsx": "react",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitOverride": true,
-    "types": ["node"]
   }
 }
