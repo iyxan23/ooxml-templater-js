@@ -322,7 +322,6 @@ describe("collectHoistsAndLabelBlocks", () => {
   it("should label a simple repeatRow block", () => {
     const sheet = new Sheet<ExpressionCell>([
       [
-        parseExpressionCell(" hello worldd!"),
         parseExpressionCell("[#repeatRow [hello] ident]"),
         parseExpressionCell("i should be repeating by now"),
         parseExpressionCell("[/#repeatRow]"),
@@ -341,8 +340,227 @@ describe("collectHoistsAndLabelBlocks", () => {
           blockContent: [["i should be repeating by now"]],
           direction: "row",
           lastCellAfterBlockEnd: [],
-          end: { col: 3, row: 0 },
+          end: { col: 2, row: 0 },
+          start: { col: 0, row: 0 },
+        },
+      ],
+    });
+  });
+
+  it("should label a simple repeatRow block with a lastCellAfterBlockEnd", () => {
+    const sheet = new Sheet<ExpressionCell>([
+      [
+        parseExpressionCell(" hello worldd!"),
+        parseExpressionCell("[#repeatRow [hello] ident]"),
+        parseExpressionCell("i should be repeating by now"),
+        parseExpressionCell("[hello world]"),
+        parseExpressionCell("[/#repeatRow] woah [:cool alright] test"),
+      ],
+      [
+        parseExpressionCell("don't mind me"),
+        null,
+        null,
+        parseExpressionCell("not supposed to be included"),
+      ],
+    ]);
+
+    const collected = collectHoistsAndLabelBlocks(sheet);
+
+    expect(collected).toEqual({
+      variableHoists: [],
+      blocks: [
+        {
+          identifier: "repeatRow",
+          arg: { type: "call", identifier: "hello", args: [] },
+          indexVariableIdentifier: "ident",
+          blockContent: [
+            ["i should be repeating by now"],
+            [
+              {
+                type: "call",
+                identifier: "hello",
+                args: ["world"],
+              },
+            ],
+          ],
+          direction: "row",
+          lastCellAfterBlockEnd: [
+            " woah ",
+            {
+              type: "variableAccess",
+              identifier: "cool",
+              args: ["alright"],
+            },
+            " test",
+          ],
+          end: { col: 4, row: 0 },
           start: { col: 1, row: 0 },
+        },
+      ],
+    });
+  });
+
+  it("should error when repeatRow is not closed", () => {
+    expect(() =>
+      collectHoistsAndLabelBlocks(
+        new Sheet<ExpressionCell>([
+          [
+            parseExpressionCell("[#repeatRow [hello] ident]"),
+            parseExpressionCell("i should be repeating by now"),
+          ],
+        ]),
+      ),
+    ).toThrowError(
+      "block with identifier `repeatRow` at col 0, row 0 is not closed",
+    );
+  });
+
+  it("should error when repeatRow is not closed 2", () => {
+    expect(() =>
+      collectHoistsAndLabelBlocks(
+        new Sheet<ExpressionCell>([
+          [parseExpressionCell("hmm")],
+          [
+            parseExpressionCell("hello world"),
+            parseExpressionCell("i should be repeating by now"),
+            parseExpressionCell("[#repeatRow [hello] ident]"),
+            parseExpressionCell("what"),
+          ],
+          [
+            parseExpressionCell("hello world"),
+            parseExpressionCell("testt"),
+            parseExpressionCell("i should be repeating by now"),
+            parseExpressionCell("what"),
+          ],
+        ]),
+      ),
+    ).toThrowError(
+      "block with identifier `repeatRow` at col 2, row 1 is not closed",
+    );
+  });
+
+  it("should label a repeatCol", () => {
+    const sheet = new Sheet<ExpressionCell>([
+      [
+        ["hello world"],
+        ["2nd col"],
+        parseExpressionCell("[#repeatCol [:hello] world]"),
+        ["shouldn't be included"],
+      ],
+      [
+        ["this shouldn't"],
+        ["this shouldn't"],
+        ["this should be repeating"],
+        ["this shouldn't"],
+      ],
+      [
+        ["not this"],
+        ["not this"],
+        parseExpressionCell("[/#repeatCol]"),
+        ["not this"],
+      ],
+    ]);
+
+    const collected = collectHoistsAndLabelBlocks(sheet);
+
+    expect(collected).toEqual({
+      variableHoists: [],
+      blocks: [
+        {
+          identifier: "repeatCol",
+          arg: { type: "variableAccess", identifier: "hello", args: [] },
+          indexVariableIdentifier: "world",
+          blockContent: [["this should be repeating"]],
+          direction: "col",
+          lastCellAfterBlockEnd: [],
+          end: { col: 2, row: 2 },
+          start: { col: 2, row: 0 },
+        },
+      ],
+    });
+  });
+
+  it("should label a repeatCol 2", () => {
+    const sheet = new Sheet<ExpressionCell>([
+      [
+        ["hello world"],
+        parseExpressionCell("[nope]"),
+        ["shouldn't be included"],
+        ["not this"],
+      ],
+      [
+        ["hello world"],
+        parseExpressionCell(
+          "[just before block] is [#repeatCol [:hello] world]",
+        ),
+        ["shouldn't be included"],
+        ["not this"],
+        ["not this"],
+      ],
+      [
+        ["this shouldn't"],
+        parseExpressionCell("[here is a call [:hello] world]"),
+        ["this shouldn't"],
+        ["not this"],
+      ],
+      [
+        ["this shouldn't"],
+        parseExpressionCell("hmm cool [test hello world] wow"),
+        ["this shouldn't"],
+        ["not this"],
+      ],
+      [
+        ["not this"],
+        parseExpressionCell("[/#repeatCol] after block [is this]"),
+        ["not this"],
+        ["not this"],
+      ],
+    ]);
+
+    const collected = collectHoistsAndLabelBlocks(sheet);
+
+    expect(collected).toEqual({
+      variableHoists: [],
+      blocks: [
+        {
+          identifier: "repeatCol",
+          arg: { type: "variableAccess", identifier: "hello", args: [] },
+          indexVariableIdentifier: "world",
+          blockContent: [
+            [
+              {
+                type: "call",
+                identifier: "here",
+                args: [
+                  "is",
+                  "a",
+                  "call",
+                  { type: "variableAccess", identifier: "hello", args: [] },
+                  "world",
+                ],
+              },
+            ],
+            [
+              "hmm cool ",
+              {
+                type: "call",
+                identifier: "test",
+                args: ["hello", "world"],
+              },
+              " wow",
+            ],
+          ],
+          direction: "col",
+          lastCellAfterBlockEnd: [
+            " after block ",
+            {
+              identifier: "is",
+              args: ["this"],
+              type: "call",
+            },
+          ],
+          end: { col: 1, row: 4 },
+          start: { col: 1, row: 1 },
         },
       ],
     });
