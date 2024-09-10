@@ -47,5 +47,9 @@
     "vitest": "^2.0.5",
     "vitest-mock-extended": "^2.0.0"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "@zip.js/zip.js": "^2.7.52",
+    "fast-xml-parser": "^4.5.0"
+  }
 }
