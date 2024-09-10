@@ -20,7 +20,7 @@ const createTemplaterVisitors: (data: any) => Visitors = (data) => ({
   before: {},
 });
 
-export async function docxReplaceTemplate(
+export async function docxFillTemplate(
   docx: ReadableStream,
   output: WritableStream,
   input: any,

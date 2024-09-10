@@ -12,11 +12,17 @@
   "typings": "dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
-    ".": {
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "default": "./dist/index.mjs"
+    "./xlsx": {
+      "require": "./dist/xlsx.js",
+      "types": "./dist/xlsx.d.ts",
+      "import": "./dist/xlsx.mjs",
+      "default": "./dist/xlsx.mjs"
+    },
+    "./docx": {
+      "require": "./dist/docx.js",
+      "types": "./dist/docx.d.ts",
+      "import": "./dist/docx.mjs",
+      "default": "./dist/docx.mjs"
     }
   },
   "repository": {

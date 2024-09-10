@@ -10,7 +10,7 @@ import { Sheet } from "./sheet/sheet";
 
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 
-export async function xlsxReplaceTemplate(
+export async function xlsxFillTemplate(
   xlsx: ReadableStream,
   output: WritableStream,
   // @ts-expect-error will be used later
@@ -231,10 +231,10 @@ class XlsxTemplater {
                 newObj:
                   obj["@_t"] === "s" && isNumeric(obj["v"])
                     ? {
-                        ...obj,
-                        v: this.sharedStrings[parseInt(obj["v"])],
-                        "@_t": "str",
-                      }
+                      ...obj,
+                      v: this.sharedStrings[parseInt(obj["v"])],
+                      "@_t": "str",
+                    }
                     : { ...obj },
               };
             }
@@ -246,10 +246,10 @@ class XlsxTemplater {
               newObj: obj.map((o) =>
                 o["@_t"] === "s" && isNumeric(o["v"])
                   ? {
-                      ...o,
-                      v: this.sharedStrings[parseInt(o["v"])],
-                      "@_t": "str",
-                    }
+                    ...o,
+                    v: this.sharedStrings[parseInt(o["v"])],
+                    "@_t": "str",
+                  }
                   : { ...o },
               ),
             };
