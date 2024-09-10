@@ -563,7 +563,7 @@ describe("extractHoistsAndBlocks", () => {
     );
   });
 
-  it.skip("should label intersecting repeatCol and repeatRow blocks", () => {
+  it("should label intersecting repeatCol and repeatRow blocks", () => {
     /* | > | v | # | <
      * | . | # | . | .
      * | . | ^ | . | .
@@ -588,5 +588,53 @@ describe("extractHoistsAndBlocks", () => {
     const collected = extractHoistsAndBlocks(sheet);
 
     console.log(JSON.stringify(sheet.getSheet(), null, 2));
+    expect(collected).toEqual({
+      variableHoists: [],
+      blocks: [
+        {
+          identifier: "repeatRow",
+          innerBlocks: [
+            {
+              identifier: "repeatCol",
+              innerBlocks: [],
+              arg: {
+                type: "call",
+                identifier: "helloCol",
+                args: [],
+              },
+              indexVariableIdentifier: "col",
+              direction: "col",
+              start: {
+                col: 1,
+                row: 0,
+                startsAt: 0,
+              },
+              end: {
+                col: 1,
+                row: 2,
+                endsAt: 0,
+              },
+            },
+          ],
+          arg: {
+            type: "call",
+            identifier: "helloRow",
+            args: [],
+          },
+          indexVariableIdentifier: "row",
+          direction: "row",
+          start: {
+            col: 0,
+            row: 0,
+            startsAt: 0,
+          },
+          end: {
+            col: 3,
+            row: 0,
+            endsAt: 0,
+          },
+        },
+      ],
+    });
   });
 });
