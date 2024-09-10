@@ -16,7 +16,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "moduleResolution": "node",
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitOverride": true,

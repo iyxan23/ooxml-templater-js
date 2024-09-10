@@ -1,4 +1,4 @@
-import path from "path";
+import * as path from "path";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import type { RollupOptions } from "rollup";
 import del from "rollup-plugin-delete";
