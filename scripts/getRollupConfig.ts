@@ -31,7 +31,7 @@ function types({ input, packageDir }: Options): RollupOptions {
         peerDeps: true,
       }),
       typescript({
-        tsconfig: path.resolve(packageDir, "tsconfig.json"),
+        tsconfig: path.resolve(packageDir, "tsconfig.build.json"),
         tsconfigOverride: { emitDeclarationOnly: true },
         abortOnError: !isWatchMode,
       }),

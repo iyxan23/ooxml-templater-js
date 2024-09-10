@@ -1,24 +1,14 @@
 {
+  "extends": "./tsconfig.build.json",
+  "include": [
+    "src",
+    "scripts",
+    "*.ts"
+  ],
+  "exclude": [],
   "compilerOptions": {
-    "module": "esnext",
-    "lib": [
-      "esnext"
-    ],
+    "allowJs": false,
     "baseUrl": ".",
-    "target": "es2020",
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "./dist",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noImplicitOverride": true,
+    "types": ["vitest/globals"]
   }
 }
