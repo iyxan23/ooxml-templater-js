@@ -228,7 +228,7 @@ export function collectHoistsAndLabelBlocks(
       while (row <= sheetBounds.rowBound) {
         const cell = expressionSheet.getCell(col, row);
         if (cell === null) {
-          col++;
+          row++;
           continue;
         }
 
@@ -238,10 +238,10 @@ export function collectHoistsAndLabelBlocks(
             (item) => typeof item !== "string" && item.type === "blockEnd",
           );
 
-          if (indexOfBlockEnd === undefined) {
+          if (indexOfBlockEnd === -1) {
             expressionSheet.setCell(col, row, result);
             blockContent.push(result);
-            col++;
+            row++;
             continue;
           }
 
@@ -260,12 +260,15 @@ export function collectHoistsAndLabelBlocks(
             // continue
             expressionSheet.setCell(col, row, result);
             blockContent.push(result);
-            col++;
+            row++;
             continue;
           }
 
-          blockContent.push(result.slice(0, indexOfBlockEnd));
+          const contentBefore = result.slice(0, indexOfBlockEnd);
+          if (contentBefore) blockContent.push();
           lastCellAfterBlockEnd = result.slice(indexOfBlockEnd + 1);
+
+          const end = { col, row };
 
           // get back to the previous col & row and + 1
           const nextRow = previous.col + 1 >= sheetBounds.colBound;
@@ -280,7 +283,7 @@ export function collectHoistsAndLabelBlocks(
             blockContent,
             lastCellAfterBlockEnd,
             start: { ...previous },
-            end: { col, row },
+            end,
           };
         }
 
