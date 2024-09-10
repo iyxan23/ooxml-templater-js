@@ -61,6 +61,7 @@ export function extractHoistsAndBlocks(
   variableHoists: Extract<Expression, { type: "variableHoist" }>[];
   blocks: Block[];
 } {
+  console.log("======");
   const variableHoists: Extract<Expression, { type: "variableHoist" }>[] = [];
   const blocks: Block[] = [];
 
@@ -106,34 +107,36 @@ export function extractHoistsAndBlocks(
 
         const { cell: result, blocks, endBlocks } = parseCell(cell);
         innerBlocks.push(...blocks);
+        console.log(endBlocks);
 
-        if (result) {
-          const endBlock = endBlocks.find(
-            (b) => b.identifier === blockStart.identifier,
-          );
-          if (!endBlock) continue;
-
-          console.log(`block ${blockStart.identifier} ended`);
-
-          return {
-            block: {
-              identifier: blockStart.identifier,
-              innerBlocks,
-              arg: repeatCountExpr,
-              indexVariableIdentifier,
-              direction: "row",
-              start: { ...previous },
-              end: {
-                col: endBlock.col,
-                row: endBlock.row,
-                endsAt: endBlock.index,
-              },
-            },
-            jumpTo: { col, row },
-          };
+        if (!result) {
+          col++;
+          continue;
         }
 
-        col++;
+        const endBlock = endBlocks.find(
+          (b) => b.identifier === blockStart.identifier,
+        );
+
+        if (!endBlock) {
+          col++;
+          continue;
+        }
+
+        console.log(`block ${blockStart.identifier} ended`);
+
+        return {
+          block: {
+            identifier: blockStart.identifier,
+            innerBlocks,
+            arg: repeatCountExpr,
+            indexVariableIdentifier,
+            direction: "row",
+            start: { ...previous },
+            end: { col, row, endsAt: endBlock.index },
+          },
+          jumpTo: { col, row },
+        };
       }
     } else if (blockStart.identifier === "repeatCol") {
       row++;
@@ -155,36 +158,38 @@ export function extractHoistsAndBlocks(
           row++;
           continue;
         }
+
         const { cell: result, blocks, endBlocks } = parseCell(cell);
         innerBlocks.push(...blocks);
 
-        if (result) {
-          const endBlock = endBlocks.find(
-            (b) => b.identifier === blockStart.identifier,
-          );
-          if (!endBlock) continue;
-
-          console.log(`block ${blockStart.identifier} ended`);
-
-          return {
-            block: {
-              identifier: blockStart.identifier,
-              innerBlocks,
-              arg: repeatCountExpr,
-              indexVariableIdentifier,
-              direction: "col",
-              start: { ...previous },
-              end: {
-                col: endBlock.col,
-                row: endBlock.row,
-                endsAt: endBlock.index,
-              },
-            },
-            jumpTo: previous,
-          };
+        if (!result) {
+          row++;
+          continue;
         }
 
-        row++;
+        const endBlock = endBlocks.find(
+          (b) => b.identifier === blockStart.identifier,
+        );
+
+        if (!endBlock) {
+          row++;
+          continue;
+        }
+
+        console.log(`block ${blockStart.identifier} ended`);
+
+        return {
+          block: {
+            identifier: blockStart.identifier,
+            innerBlocks,
+            arg: repeatCountExpr,
+            indexVariableIdentifier,
+            direction: "col",
+            start: { ...previous },
+            end: { col, row, endsAt: endBlock.index },
+          },
+          jumpTo: previous,
+        };
       }
     }
 
@@ -198,16 +203,13 @@ export function extractHoistsAndBlocks(
     blocks: Block[];
     endBlocks: {
       identifier: string;
-      col: number;
-      row: number;
       index: number;
     }[];
   } {
+    console.log(`parseCell with cell ${JSON.stringify(parsedExpression)}`);
     const blocks: Block[] = [];
     const endBlocks: {
       identifier: string;
-      col: number;
-      row: number;
       index: number;
     }[] = [];
     const resultingContent: ExpressionCell = [];
@@ -229,7 +231,7 @@ export function extractHoistsAndBlocks(
 
         blocks.push({ ...block, start: { ...block.start, startsAt: index } });
       } else if (item.type === "blockEnd") {
-        endBlocks.push({ identifier: item.identifier, col, row, index });
+        endBlocks.push({ identifier: item.identifier, index });
       } else {
         resultingContent.push(item);
         continue;
@@ -249,6 +251,10 @@ export function extractHoistsAndBlocks(
         index++; // skip the nextElement
       }
     }
+
+    console.log(
+      `parseCell ended with ${JSON.stringify(resultingContent)}, blocks: ${blocks.map((b) => b.identifier).join(",")}, endBlocks: ${endBlocks.map((e) => e.identifier).join(",")}`,
+    );
 
     return { cell: resultingContent, blocks, endBlocks };
   }

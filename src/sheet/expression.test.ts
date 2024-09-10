@@ -319,7 +319,7 @@ describe("extractHoistsAndBlocks", () => {
     ]);
   });
 
-  it.skip("should label a simple repeatRow block", () => {
+  it("should label a simple repeatRow block", () => {
     const sheet = new Sheet<ExpressionCell>([
       [
         parseExpressionCell("[#repeatRow [hello] ident]"),
@@ -337,11 +337,10 @@ describe("extractHoistsAndBlocks", () => {
           identifier: "repeatRow",
           arg: { type: "call", identifier: "hello", args: [] },
           indexVariableIdentifier: "ident",
-          blockContent: [["i should be repeating by now"]],
           direction: "row",
-          lastCellAfterBlockEnd: [],
-          end: { col: 2, row: 0 },
-          start: { col: 0, row: 0 },
+          innerBlocks: [],
+          end: { col: 2, row: 0, endsAt: 0 },
+          start: { col: 0, row: 0, startsAt: 0 },
         },
       ],
     });
