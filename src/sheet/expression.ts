@@ -1,5 +1,9 @@
 import { Sheet } from "./sheet";
 
+// one thing to keep in mind: in a single cell, there cannot be multiple
+// startBlock expressions yet, it's a limitation of the current implementation
+// and i don't find myself needing that. so i'm going to leave it as is for now
+
 type Block = {
   identifier: string;
   arg: Expression;
@@ -213,6 +217,7 @@ export function extractHoistsAndBlocks(
       index: number;
     }[] = [];
     const resultingContent: ExpressionCell = [];
+    let parsedABlock = false;
 
     for (let index = 0; index < parsedExpression.length; index++) {
       const item = parsedExpression[index]!;
@@ -225,11 +230,18 @@ export function extractHoistsAndBlocks(
       if (item.type === "variableHoist") {
         variableHoists.push(item);
       } else if (item.type === "blockStart") {
+        if (parsedABlock)
+          throw new Error(
+            "cannot have two startBlock expressions in the same cell, this" +
+            " is a limitation of the current implementation.",
+          );
+
         const { block, jumpTo } = parseBlock(item, col, row);
         col = jumpTo.col;
         row = jumpTo.row;
 
         blocks.push({ ...block, start: { ...block.start, startsAt: index } });
+        parsedABlock = true;
       } else if (item.type === "blockEnd") {
         endBlocks.push({ identifier: item.identifier, index });
       } else {
