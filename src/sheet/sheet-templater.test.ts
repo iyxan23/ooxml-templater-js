@@ -337,6 +337,7 @@ describe("collectHoistsAndLabelBlocks", () => {
         {
           identifier: "repeatRow",
           arg: { type: "call", identifier: "hello", args: [] },
+          indexVariableIdentifier: "ident",
           blockContent: [["i should be repeating by now"]],
           direction: "row",
           lastCellAfterBlockEnd: [],

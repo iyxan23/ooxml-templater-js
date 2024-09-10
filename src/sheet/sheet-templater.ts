@@ -60,6 +60,8 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 type Block = {
   identifier: string;
   arg: Expression;
+  indexVariableIdentifier: string;
+
   direction: "col" | "row";
 
   // counted per col/row depending on the identifier
@@ -146,6 +148,12 @@ export function collectHoistsAndLabelBlocks(
       if (typeof repeatCountExpr !== "object")
         throw new Error(`at row ${row}, column ${col}: expected an expression`);
 
+      const indexVariableIdentifier = blockStart.args[1];
+      if (typeof indexVariableIdentifier !== "string")
+        throw new Error(
+          `at row ${row}, column ${col}: expected an identifier to name the index variable`,
+        );
+
       // go to cells to the right, until we encounter a blockEnd with the same identifier [/#repeatRow]
       while (col <= sheetBounds.colBound) {
         const cell = expressionSheet.getCell(col, row);
@@ -193,6 +201,7 @@ export function collectHoistsAndLabelBlocks(
           return {
             identifier: blockStart.identifier,
             arg: repeatCountExpr,
+            indexVariableIdentifier,
             direction: "row",
             blockContent,
             lastCellAfterBlockEnd,
@@ -208,6 +217,12 @@ export function collectHoistsAndLabelBlocks(
       const repeatCountExpr = blockStart.args[0];
       if (typeof repeatCountExpr !== "object")
         throw new Error(`at row ${row}, column ${col}: expected an expression`);
+
+      const indexVariableIdentifier = blockStart.args[1];
+      if (typeof indexVariableIdentifier !== "string")
+        throw new Error(
+          `at row ${row}, column ${col}: expected an identifier to name the index variable`,
+        );
 
       // go to cells to the right, until we encounter a blockEnd with the same identifier [/#repeatCol]
       while (row <= sheetBounds.rowBound) {
@@ -260,6 +275,7 @@ export function collectHoistsAndLabelBlocks(
           return {
             identifier: blockStart.identifier,
             arg: repeatCountExpr,
+            indexVariableIdentifier,
             direction: "col",
             blockContent,
             lastCellAfterBlockEnd,
@@ -273,7 +289,7 @@ export function collectHoistsAndLabelBlocks(
     }
 
     throw new Error(
-      `block with identifier ${blockStart.identifier} at col ${col}, row ${row} is not closed`,
+      `block with identifier \`${blockStart.identifier}\` at col ${previous.col}, row ${previous.row} is not closed`,
     );
   }
 
@@ -450,30 +466,30 @@ export type ExpressionCell = (string | Expression)[];
 
 export type Expression =
   | {
-    type: "blockStart";
-    identifier: string;
-    args: (string | Expression)[];
-  }
+      type: "blockStart";
+      identifier: string;
+      args: (string | Expression)[];
+    }
   | {
-    type: "blockEnd";
-    identifier: string;
-  }
+      type: "blockEnd";
+      identifier: string;
+    }
   | {
-    type: "call";
-    identifier: string;
-    args: (string | Expression)[];
-  }
+      type: "call";
+      identifier: string;
+      args: (string | Expression)[];
+    }
   | {
-    type: "variableAccess";
-    identifier: string;
-    args: (string | Expression)[];
-  }
+      type: "variableAccess";
+      identifier: string;
+      args: (string | Expression)[];
+    }
   | {
-    type: "variableHoist";
-    identifier: string;
-    expression: Expression;
-  }
+      type: "variableHoist";
+      identifier: string;
+      expression: Expression;
+    }
   | {
-    type: "lambda";
-    expression: Expression;
-  };
+      type: "lambda";
+      expression: Expression;
+    };
