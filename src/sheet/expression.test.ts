@@ -3,7 +3,7 @@ import {
   parseExpressionCell,
   ExpressionCell,
   collectHoistsAndLabelBlocks,
-} from "./sheet-templater";
+} from "./expression";
 import { Sheet } from "./sheet";
 
 describe("parseExpressionCell", () => {
@@ -561,6 +561,129 @@ describe("collectHoistsAndLabelBlocks", () => {
           ],
           end: { col: 1, row: 4 },
           start: { col: 1, row: 1 },
+        },
+      ],
+    });
+  });
+
+  it("should error when repeatCol is not closed", () => {
+    expect(() =>
+      collectHoistsAndLabelBlocks(
+        new Sheet<ExpressionCell>([
+          [
+            parseExpressionCell("hmm"),
+            parseExpressionCell("hello world"),
+            parseExpressionCell("[#repeatCol [hello] ident]"),
+            parseExpressionCell("what"),
+          ],
+          [
+            parseExpressionCell("hello world"),
+            parseExpressionCell("testt"),
+            parseExpressionCell("i should be repeating by now"),
+            parseExpressionCell("what"),
+          ],
+        ]),
+      ),
+    ).toThrowError(
+      "block with identifier `repeatCol` at col 2, row 0 is not closed",
+    );
+  });
+
+  it("should error when repeatCol is not closed 2", () => {
+    expect(() =>
+      collectHoistsAndLabelBlocks(
+        new Sheet<ExpressionCell>([
+          [],
+          [
+            parseExpressionCell("hmm"),
+            parseExpressionCell("hello world"),
+            parseExpressionCell("what"),
+            parseExpressionCell("[#repeatCol [hello] ident]"),
+          ],
+          [
+            parseExpressionCell("hello world"),
+            parseExpressionCell("testt"),
+            parseExpressionCell("i should be repeating by now"),
+          ],
+          [],
+          [],
+        ]),
+      ),
+    ).toThrowError(
+      "block with identifier `repeatCol` at col 3, row 1 is not closed",
+    );
+  });
+
+  it("should label intersecting repeatCol and repeatRow blocks", () => {
+    /* | > | v | # | <
+     * | . | # | . | .
+     * | . | ^ | . | .
+     */
+    const sheet = new Sheet<ExpressionCell>([
+      [
+        parseExpressionCell("[#repeatRow [helloRow] row]"),
+        parseExpressionCell("[#repeatCol [helloCol] col]"),
+        parseExpressionCell("this shouldn't be included"),
+        parseExpressionCell("[/#repeatRow]"),
+      ],
+      [
+        parseExpressionCell("this shouldn't be included"),
+        parseExpressionCell("i should be repeating by now"),
+      ],
+      [
+        parseExpressionCell("this shouldn't be included"),
+        parseExpressionCell("[/#repeatCol]"),
+      ],
+    ]);
+
+    const collected = collectHoistsAndLabelBlocks(sheet);
+
+    console.log(JSON.stringify(sheet.getSheet(), null, 2));
+
+    expect(collected).toEqual({
+      variableHoists: [],
+      blocks: [
+        {
+          identifier: "repeatCol",
+          arg: {
+            type: "call",
+            identifier: "helloCol",
+            args: [],
+          },
+          indexVariableIdentifier: "col",
+          direction: "col",
+          blockContent: [
+            ["i should be repeating by now"],
+          ],
+          lastCellAfterBlockEnd: [],
+          start: {
+            col: 1,
+            row: 0,
+          },
+          end: {
+            col: 1,
+            row: 2,
+          },
+        },
+        {
+          identifier: "repeatRow",
+          arg: {
+            type: "call",
+            identifier: "helloRow",
+            args: [],
+          },
+          indexVariableIdentifier: "row",
+          direction: "row",
+          blockContent: [[]],
+          lastCellAfterBlockEnd: [],
+          start: {
+            col: 0,
+            row: 0,
+          },
+          end: {
+            col: 3,
+            row: 0,
+          },
         },
       ],
     });
