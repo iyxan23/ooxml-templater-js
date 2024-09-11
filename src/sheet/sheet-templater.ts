@@ -52,17 +52,16 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
   private functions: Record<string, TemplaterFunction<any>> = {
     helloWorld: createTemplaterNoArgsFunction(() => "hello world"),
+    testLambda: createTemplaterFunction(z.tuple([z.function()]), (a) => a()),
   };
 
   constructor(
     sheet: Sheet<SheetT>,
     {
-      data,
       rowInfo,
       colInfo,
       functions,
     }: {
-      data: any;
       rowInfo?: Record<number, RowInfo>;
       colInfo?: Record<number, ColInfo>;
       functions?: Record<string, TemplaterFunction<any>>;
@@ -82,14 +81,54 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
   }
 
-  interpret() {
+  interpret(data: any): Result<undefined> {
+    const issues = [];
     const parsedExpressions = this.parseExpressions();
-    // @ts-expect-error will be used later
-    const { variableHoists, blockHoists } =
+
+    // stage 1: extract hoists and blocks
+    const { variableHoists, blocks } =
       extractHoistsAndBlocks(parsedExpressions);
 
-    // find hoists and collect them
-    // and also match some blockStart and blockEnds
+    // stage 2: evaluate variable hoists
+    const globalVariables: Record<string, any> = {};
+    for (const { col, row, expr } of variableHoists) {
+      const sheetCell = this.sheet.getCell(col, row);
+      if (sheetCell === null) {
+        throw new Error(
+          `cannot find the cell referenced by variable hoist on` +
+          ` col ${col} row ${row}`,
+        );
+      }
+
+      const result = evaluateExpression(
+        expr,
+        {
+          col,
+          row,
+          callTree: [`hoisted variable \`${expr.identifier}\``],
+        },
+        (funcName) => this.functions[funcName]?.call,
+        (variableName) => globalVariables[variableName] ?? data[variableName],
+      );
+
+      issues.push(...result.issues);
+
+      if (result.status === "failed") {
+        return {
+          status: "failed",
+          issues,
+          error: result.error,
+        };
+      }
+
+      globalVariables[expr.identifier] = result.result;
+    }
+
+    return {
+      status: "success",
+      result: undefined,
+      issues,
+    };
   }
 
   private evaluateExpression(
