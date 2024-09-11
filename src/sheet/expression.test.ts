@@ -344,6 +344,13 @@ describe("extractHoistsAndBlocks", () => {
         },
       ],
     });
+
+    // assert that the blocks are removed
+    expect(sheet.getWholeRow({ row: 0 })).toEqual([
+      [],
+      ["i should be repeating by now"],
+      [],
+    ]);
   });
 
   it("should label a simple repeatRow block with a lastCellAfterBlockEnd", () => {
@@ -379,6 +386,29 @@ describe("extractHoistsAndBlocks", () => {
         },
       ],
     });
+
+    // assert that the blocks are removed
+    expect(sheet.getWholeRow({ row: 0 })).toEqual([
+      [" hello worldd!"],
+      [],
+      ["i should be repeating by now"],
+      [
+        {
+          type: "call",
+          identifier: "hello",
+          args: ["world"],
+        },
+      ],
+      [
+        " woah ",
+        {
+          type: "variableAccess",
+          identifier: "cool",
+          args: ["alright"],
+        },
+        " test",
+      ],
+    ]);
   });
 
   it("should error when repeatRow is not closed", () => {
@@ -458,6 +488,12 @@ describe("extractHoistsAndBlocks", () => {
         },
       ],
     });
+
+    expect(sheet.getWholeCol({ col: 2 })).toEqual([
+      [],
+      ["this should be repeating"],
+      [],
+    ]);
   });
 
   it("should label a repeatCol 2", () => {
@@ -513,6 +549,58 @@ describe("extractHoistsAndBlocks", () => {
         },
       ],
     });
+
+    expect(sheet.getWholeCol({ col: 1 })).toEqual([
+      [
+        {
+          type: "call",
+          identifier: "nope",
+          args: [],
+        },
+      ],
+      [
+        {
+          type: "call",
+          identifier: "just",
+          args: ["before", "block"],
+        },
+        " is ",
+      ],
+      [
+        {
+          type: "call",
+          identifier: "here",
+          args: [
+            "is",
+            "a",
+            "call",
+            {
+              type: "variableAccess",
+              identifier: "hello",
+              args: [],
+            },
+            "world",
+          ],
+        },
+      ],
+      [
+        "hmm cool ",
+        {
+          type: "call",
+          identifier: "test",
+          args: ["hello", "world"],
+        },
+        " wow",
+      ],
+      [
+        " after block ",
+        {
+          type: "call",
+          identifier: "is",
+          args: ["this"],
+        },
+      ],
+    ]);
   });
 
   it("should error when repeatCol is not closed", () => {
@@ -587,7 +675,19 @@ describe("extractHoistsAndBlocks", () => {
 
     const collected = extractHoistsAndBlocks(sheet);
 
-    console.log(JSON.stringify(sheet.getSheet(), null, 2));
+    expect(sheet.getWholeRow({ row: 0 })).toEqual([
+      [],
+      [],
+      ["this shouldn't be included"],
+      [],
+    ]);
+
+    expect(sheet.getWholeCol({ col: 1 })).toEqual([
+      [],
+      ["i should be repeating by now"],
+      [],
+    ]);
+
     expect(collected).toEqual({
       variableHoists: [],
       blocks: [
@@ -637,4 +737,6 @@ describe("extractHoistsAndBlocks", () => {
       ],
     });
   });
+
+  it();
 });
