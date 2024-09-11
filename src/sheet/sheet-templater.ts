@@ -125,7 +125,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
         return { ...evalResult, issues };
       }
 
-      result += evalResult.result;
+      if (typeof evalResult.result !== "undefined") result += evalResult.result;
     }
 
     return {

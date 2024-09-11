@@ -19,7 +19,7 @@ export function evaluateExpression(
   context: { col: number; row: number },
   lookupFunction: (funcName: string) => ((...args: any[]) => any) | undefined,
   lookupVariable: (name: string) => any | undefined,
-): Result<string> {
+): Result<any | undefined> {
   if (
     item.type === "blockStart" ||
     item.type === "blockEnd" ||
@@ -32,7 +32,7 @@ export function evaluateExpression(
 
     return {
       status: "success",
-      result: "",
+      result: undefined,
       issues: [
         {
           col: context.col,
@@ -53,7 +53,7 @@ export function evaluateExpression(
 
     return {
       status: "success",
-      result: "",
+      result: undefined,
       issues: [
         {
           col: context.col,
@@ -66,6 +66,7 @@ export function evaluateExpression(
 
   if (item.type === "call") {
     const funcArgs = [];
+    const issues = [];
     for (const arg of item.args) {
       if (typeof arg === "string") {
         funcArgs.push(arg);
@@ -78,6 +79,7 @@ export function evaluateExpression(
         lookupFunction,
         lookupVariable,
       );
+      issues.push(...result.issues);
 
       if (result.status === "failed") {
         return result;
@@ -89,8 +91,9 @@ export function evaluateExpression(
     if (!func) {
       return {
         status: "success",
-        result: "",
+        result: undefined,
         issues: [
+          ...issues,
           {
             col: context.col,
             row: context.row,
@@ -109,6 +112,7 @@ export function evaluateExpression(
         status: "success",
         result,
         issues: [
+          ...issues,
           {
             col: context.col,
             row: context.row,
@@ -123,7 +127,30 @@ export function evaluateExpression(
     return {
       status: "success",
       result,
-      issues: [],
-    }
+      issues,
+    };
   }
+
+  // item is a variableAccess
+
+  const variable = lookupVariable(item.identifier);
+  if (!variable) {
+    return {
+      status: "success",
+      result: undefined,
+      issues: [
+        {
+          col: context.col,
+          row: context.row,
+          message: `variable \`${item.identifier}\` is not defined.`,
+        },
+      ],
+    };
+  }
+
+  return {
+    status: "success",
+    result: variable,
+    issues: [],
+  };
 }
