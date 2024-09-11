@@ -1,4 +1,5 @@
-import { extractHoistsAndBlocks, ExpressionCell, parseExpressionCell } from "./expression";
+import { type ExpressionCell, parseExpressionCell } from "./expression/parser";
+import { extractHoistsAndBlocks } from "./expression/extractor";
 import { Sheet } from "./sheet";
 
 interface TemplatableCell {
