@@ -16,7 +16,7 @@ export type TemplaterFunction<R> = {
 
 export function evaluateExpression(
   item: Expression,
-  context: { col: number; row: number },
+  context: { col: number; row: number; callTree: string[] },
   lookupFunction: (funcName: string) => ((...args: any[]) => any) | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<any | undefined> {
@@ -27,7 +27,7 @@ export function evaluateExpression(
   ) {
     console.warn(
       `at col ${context.col} ${context.row} ${item.type} is not supposed` +
-        ` to be in the evaluation stage.`,
+      ` to be in the evaluation stage.`,
     );
 
     return {
@@ -46,14 +46,26 @@ export function evaluateExpression(
   }
 
   if (item.type === "lambda") {
-    console.warn(
-      `at col ${context.col} ${context.row} lambda expressions are not ` +
-        `supposed to be used as the sole expression.`,
-    );
-
     return {
       status: "success",
-      result: undefined,
+      result: (...args: any[]) => {
+        const result = evaluateExpression(
+          item.expression,
+          {
+            ...context,
+            callTree: [...context.callTree, "lambda"],
+          },
+          lookupFunction,
+          lookupVariable,
+        );
+
+        if (result.status === "failed") {
+          // todo: gracefully return with a failed info
+          throw new Error("inner lambda failed to execute");
+        }
+
+        return result.result;
+      },
       issues: [
         {
           col: context.col,
@@ -75,7 +87,13 @@ export function evaluateExpression(
 
       const result = evaluateExpression(
         arg,
-        context,
+        {
+          ...context,
+          callTree: [
+            ...context.callTree,
+            `function \`${item.identifier}\` call`,
+          ],
+        },
         lookupFunction,
         lookupVariable,
       );
