@@ -737,6 +737,4 @@ describe("extractHoistsAndBlocks", () => {
       ],
     });
   });
-
-  it();
 });

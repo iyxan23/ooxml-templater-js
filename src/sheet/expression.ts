@@ -81,9 +81,6 @@ export function extractHoistsAndBlocks(
     block: NestedOmit<Block, "start.startsAt">;
     jumpTo: { col: number; row: number };
   } {
-    console.log(
-      `parseBlock started at col ${col} row ${row}: ${blockStart.identifier}\n`,
-    );
     const previous = { col, row };
     const innerBlocks: Block[] = [];
 
@@ -136,8 +133,6 @@ export function extractHoistsAndBlocks(
           col++;
           continue;
         }
-
-        console.log(`block ${blockStart.identifier} ended`);
 
         return {
           block: {
@@ -202,8 +197,6 @@ export function extractHoistsAndBlocks(
           continue;
         }
 
-        console.log(`block ${blockStart.identifier} ended`);
-
         return {
           block: {
             identifier: blockStart.identifier,
@@ -237,9 +230,6 @@ export function extractHoistsAndBlocks(
     }[];
     jumpTo?: { col: number; row: number };
   } {
-    console.log(
-      `parseCell with cell ${JSON.stringify(parsedExpression)} at col ${col} row ${row}`,
-    );
     const blocks: Block[] = [];
     const endBlocks: {
       identifier: string;
@@ -292,10 +282,6 @@ export function extractHoistsAndBlocks(
         index++; // skip the nextElement
       }
     }
-
-    console.log(
-      `parseCell ended with ${JSON.stringify(resultingContent)}, blocks: ${blocks.map((b) => b.identifier).join(",")}, endBlocks: ${endBlocks.map((e) => e.identifier).join(",")}`,
-    );
 
     return { cell: resultingContent, blocks, endBlocks, jumpTo };
   }
