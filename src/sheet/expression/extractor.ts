@@ -63,10 +63,19 @@ type NestedOmit<
 export function extractHoistsAndBlocks(
   expressionSheet: Sheet<ExpressionCell>,
 ): {
-  variableHoists: Extract<Expression, { type: "variableHoist" }>[];
+  variableHoists: {
+    expr: Extract<Expression, { type: "variableHoist" }>;
+    col: number;
+    row: number;
+  }[];
   blocks: Block[];
 } {
-  const variableHoists: Extract<Expression, { type: "variableHoist" }>[] = [];
+  const variableHoists: {
+    expr: Extract<Expression, { type: "variableHoist" }>;
+    col: number;
+    row: number;
+  }[] = [];
+
   const blocks: Block[] = [];
 
   const sheetBounds = expressionSheet.getBounds();
@@ -249,7 +258,7 @@ export function extractHoistsAndBlocks(
       }
 
       if (item.type === "variableHoist") {
-        variableHoists.push(item);
+        variableHoists.push({ expr: item, col, row });
       } else if (item.type === "blockStart") {
         if (parsedABlock)
           throw new Error(
