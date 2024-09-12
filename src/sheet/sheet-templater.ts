@@ -16,11 +16,11 @@ interface TemplatableCell {
   cloneWithTextContent(content: string): this;
 }
 
-export function createTemplaterNoArgsFunction<T extends z.ZodTuple, R>(
-  call: (...args: z.infer<T>) => R,
+export function createTemplaterNoArgsFunction<R>(
+  call: () => R,
 ): TemplaterFunction<R> {
   return {
-    call: (_funcName, ...args: any) => call(...args),
+    call: () => success(call()),
   };
 }
 
@@ -85,10 +85,10 @@ export function callLambda(
  *
  * See `success(...)`, and `failure(...)` to easily create `Result<any>` objects.
  */
-export function createTemplaterFunction<
-  T extends z.ZodTuple,
-  R extends Result<any>,
->(schema: T, call: (...args: z.infer<T>) => R): TemplaterFunction<R> {
+export function createTemplaterFunction<T extends z.ZodTuple, R>(
+  schema: T,
+  call: (...args: z.infer<T>) => Result<R>,
+): TemplaterFunction<R> {
   return {
     call: (funcName, ...args: any) => {
       const result = schema.safeParse(args);

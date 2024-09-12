@@ -9,7 +9,7 @@ export type Issue = {
 };
 
 export type TemplaterFunction<R> = {
-  call: (funcName: string, ...args: any[]) => R;
+  call: (funcName: string, ...args: any[]) => Result<R>;
 };
 
 export function evaluateExpression(
