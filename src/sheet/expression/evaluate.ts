@@ -118,23 +118,6 @@ export function evaluateExpression(
       return result;
     }
 
-    let resultData = result.result;
-
-    if (typeof resultData !== "string") {
-      resultData = JSON.stringify(resultData);
-
-      return success(result, [
-        ...issues,
-        {
-          col: context.col,
-          row: context.row,
-          message:
-            `function \`${item.identifier}\` should return a ` +
-            `string, falling back to JSON.stringify.`,
-        },
-      ]);
-    }
-
     return success(result.result, [...result.issues, ...issues]);
   }
 
