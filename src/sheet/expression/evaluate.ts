@@ -106,7 +106,7 @@ export function evaluateExpression(
       ]);
     }
 
-    let result = func.call(item.identifier, ...funcArgs);
+    let result = func(item.identifier, ...funcArgs);
 
     if (result.status === "failed") {
       return result;

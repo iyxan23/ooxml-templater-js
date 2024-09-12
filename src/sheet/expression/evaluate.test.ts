@@ -48,7 +48,7 @@ describe("expression evaluation", () => {
       { col: 0, row: 0, callTree: ["root"] },
       (fName) =>
         fName === "hello"
-          ? (arg) => success("hello, " + JSON.stringify(arg))
+          ? (_funcName, arg) => success("hello, " + JSON.stringify(arg))
           : undefined,
       (_vName) => undefined,
     );
@@ -185,7 +185,7 @@ describe("expression evaluation", () => {
       expr,
       { col: 0, row: 0, callTree: ["root"] },
       (fName) =>
-        fName === "hello" ? (arg) => success("hello " + arg) : undefined,
+        fName === "hello" ? (_funcName, arg) => success("hello " + arg) : undefined,
       (_vName) => undefined,
     );
 
