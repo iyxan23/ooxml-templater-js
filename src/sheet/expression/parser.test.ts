@@ -17,6 +17,22 @@ describe("parseExpressionCell", () => {
     expect(parseExpressionCell(input)).toEqual(expected);
   });
 
+  it("should parse a string with spaces", () => {
+    const input =
+      'freeform [huh "hello world" "  hey you can do this!!!"] text yay';
+    const expected: ExpressionCell = [
+      "freeform ",
+      {
+        type: "call",
+        identifier: "huh",
+        args: ["hello world", "  hey you can do this!!!"],
+      },
+      " text yay",
+    ];
+
+    expect(parseExpressionCell(input)).toEqual(expected);
+  });
+
   it("should parse a simple call", () => {
     const input = "freeform [hello world] text yay";
     const expected: ExpressionCell = [
@@ -277,4 +293,3 @@ describe("parseExpressionCell", () => {
     expect(parseExpressionCell(input)).toEqual(expected);
   });
 });
-

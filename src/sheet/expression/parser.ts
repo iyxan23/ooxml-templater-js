@@ -48,6 +48,23 @@ export function parseExpressionCell(s: string): ExpressionCell {
         args.push(parseExpression());
         index++;
         continue;
+      } else if (char === '"') {
+        let str = "";
+
+        index++;
+
+        while (index < s.length) {
+          const char = s[index];
+          if (char === '"') break;
+          str += char;
+
+          index++;
+        }
+
+        index++;
+
+        currentBuf += str;
+        continue;
       } else if (char === " " || char === "\t") {
         if (!currentBuf) {
           index++;
