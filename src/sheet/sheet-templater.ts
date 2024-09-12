@@ -1,5 +1,5 @@
 import { type ExpressionCell, parseExpressionCell } from "./expression/parser";
-import { extractHoistsAndBlocks } from "./expression/extractor";
+import { Block, extractHoistsAndBlocks } from "./expression/extractor";
 import { Sheet } from "./sheet";
 import { z } from "zod";
 import {
@@ -10,6 +10,7 @@ import {
 } from "./expression/evaluate";
 import { resultSymbol, success } from "./expression/result";
 import { Result } from "./expression/result";
+import * as deepmerge from "deepmerge";
 
 interface TemplatableCell {
   getTextContent(): string;
@@ -156,7 +157,6 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     const parsedExpressions = this.parseExpressions();
 
     // stage 1: extract hoists and blocks
-    // @ts-expect-error
     const { variableHoists, blocks } =
       extractHoistsAndBlocks(parsedExpressions);
 
@@ -167,7 +167,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       if (sheetCell === null) {
         throw new Error(
           `cannot find the cell referenced by variable hoist on` +
-          ` col ${col} row ${row}`,
+            ` col ${col} row ${row}`,
         );
       }
 
@@ -191,6 +191,15 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       globalVariables[expr.identifier] = result.result;
     }
 
+    // stage 3: block expansion
+    // @ts-expect-error will be used later
+    const localVariables = this.expandBlocks(
+      parsedExpressions,
+      blocks,
+      (fName) => this.functions[fName]?.call,
+      (vName) => globalVariables[vName] ?? data[vName],
+    );
+
     return {
       sym: resultSymbol,
       status: "success",
@@ -199,8 +208,107 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     };
   }
 
-  // @ts-expect-error will be used later
-  private evaluateExpression(
+  private expandBlocks<T>(
+    sheet: Sheet<T>,
+    blocks: Block[],
+    lookupFunction: (
+      name: string,
+    ) => TemplaterFunction<any>["call"] | undefined,
+    lookupVariable: (name: string) => any | undefined,
+  ): Result<Record<number, Record<number, Record<string, any>>>> {
+    const issues: Issue[] = [];
+    let localVariables: Record<
+      number,
+      Record<number, Record<string, any>>
+    > = {};
+
+    for (const block of blocks) {
+      // expand inner blocks first
+      const result = this.expandBlocks(
+        sheet,
+        block.innerBlocks,
+        lookupFunction,
+        lookupVariable,
+      );
+
+      if (result.status === "failed") return result;
+      issues.push(...result.issues);
+
+      localVariables = deepmerge(localVariables, result.result);
+
+      const repeatAmountResult = evaluateExpression(
+        block.arg,
+        {
+          col: block.start.col,
+          row: block.start.row,
+          callTree: [`${block.identifier} block`],
+        },
+        (fName) => lookupFunction(fName),
+        (vName) => lookupVariable(vName),
+      );
+
+      if (repeatAmountResult.status === "failed") {
+        return repeatAmountResult;
+      }
+
+      issues.push(...repeatAmountResult.issues);
+      const repeatAmount = repeatAmountResult.result;
+
+      if (block.identifier === "repeatRow") {
+        for (let i = 0; i < repeatAmount; i++) {
+          sheet.cloneMapRow({
+            row: block.start.row,
+            colStart: block.start.col,
+            colEnd: block.end.col,
+            count: repeatAmount,
+            map: ({ relativeCol, relativeRow, previousData }) => {
+              const row = block.start.row + relativeRow;
+              const col = block.start.col + relativeCol;
+              const ident = block.indexVariableIdentifier;
+
+              if (!localVariables[row]) {
+                localVariables[row] = { [col]: { [ident]: i } };
+              } else if (!localVariables[row][col]) {
+                localVariables[row][col] = { [ident]: i };
+              } else if (!localVariables[row][col][ident]) {
+                localVariables[row][col][ident] = i;
+              }
+
+              return previousData;
+            },
+          });
+        }
+      } else if (block.identifier === "repeatCol") {
+        for (let i = 0; i < repeatAmount; i++) {
+          sheet.cloneMapCol({
+            col: block.start.col,
+            rowStart: block.start.row,
+            rowEnd: block.end.row,
+            count: repeatAmount,
+            map: ({ relativeCol, relativeRow, previousData }) => {
+              const row = block.start.row + relativeRow;
+              const col = block.start.col + relativeCol;
+              const ident = block.indexVariableIdentifier;
+
+              if (!localVariables[row]) {
+                localVariables[row] = { [col]: { [ident]: i } };
+              } else if (!localVariables[row][col]) {
+                localVariables[row][col] = { [ident]: i };
+              } else if (!localVariables[row][col][ident]) {
+                localVariables[row][col][ident] = i;
+              }
+
+              return previousData;
+            },
+          });
+        }
+      }
+    }
+
+    return success(localVariables, issues);
+  }
+
+  private evaluateExpressionCell(
     cell: ExpressionCell,
     sheetCell: SheetT,
     {

@@ -5,7 +5,7 @@ import type { ExpressionCell, Expression } from "./parser";
 // startBlock expressions yet, it's a limitation of the current implementation
 // and i don't find myself needing that. so i'm going to leave it as is for now
 
-type Block = {
+export type Block = {
   identifier: string;
   arg: Expression;
   indexVariableIdentifier: string;
