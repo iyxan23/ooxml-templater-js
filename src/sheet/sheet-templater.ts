@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   evaluateExpression,
   Issue,
+  LambdaFunction,
   TemplaterFunction,
 } from "./expression/evaluate";
 import { resultSymbol, success } from "./expression/result";
@@ -47,6 +48,11 @@ export function callLambda(
     );
 }
 
+type MapFunctionToLambda<T> = T extends (...args: any[]) => infer R
+  ? LambdaFunction<R>
+  : T;
+type MapFunctionsToLambdas<T> = { [K in keyof T]: MapFunctionToLambda<T[K]> };
+
 /**
  * ## Calling a lambda
  * To call a lambda, use `z.function()` as arg, but call
@@ -87,7 +93,7 @@ export function callLambda(
  */
 export function createTemplaterFunction<T extends z.ZodTuple, R>(
   schema: T,
-  call: (...args: z.infer<T>) => Result<R>,
+  call: (...args: MapFunctionsToLambdas<z.infer<T>>) => Result<R>,
 ): TemplaterFunction<R> {
   return {
     call: (funcName, ...args: any) => {
@@ -99,7 +105,7 @@ export function createTemplaterFunction<T extends z.ZodTuple, R>(
         );
       }
 
-      return call(...result.data);
+      return call(...(result.data as MapFunctionsToLambdas<z.infer<T>>));
     },
   };
 }

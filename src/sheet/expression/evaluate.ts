@@ -12,12 +12,16 @@ export type TemplaterFunction<R> = {
   call: (funcName: string, ...args: any[]) => Result<R>;
 };
 
+export type LambdaFunction<T> = (
+  lookupLocalVariable?: (name: string) => any,
+) => Result<T>;
+
 export function evaluateExpression(
   item: Expression,
   context: { col: number; row: number; callTree: string[] },
   lookupFunction: (
     funcName: string,
-  ) => ((...args: any[]) => Result<any>) | undefined,
+  ) => TemplaterFunction<any>["call"] | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<any | undefined> {
   if (
@@ -48,18 +52,20 @@ export function evaluateExpression(
     // the return type is of type Issue<any>, which could be a "failed" (known
     // from `.status`) execution, due to the nature of interpreted languages.
     // there could also be issues that can be seen from `.status`.
-    return success((lookupLocalVariable: (name: string) => any) =>
-      evaluateExpression(
-        item.expression,
-        {
-          ...context,
-          callTree: [...context.callTree, "lambda"],
-        },
-        lookupFunction,
+    return success<LambdaFunction<any>>(
+      (lookupLocalVariable?: (name: string) => any) =>
+        evaluateExpression(
+          item.expression,
+          {
+            ...context,
+            callTree: [...context.callTree, "lambda"],
+          },
+          lookupFunction,
 
-        /* lookupVariable: */
-        (varName) => lookupLocalVariable(varName) ?? lookupVariable(varName),
-      ),
+          /* lookupVariable: */
+          (varName) =>
+            lookupLocalVariable?.(varName) ?? lookupVariable(varName),
+        ),
     );
   }
 
