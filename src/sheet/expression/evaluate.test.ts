@@ -1,5 +1,6 @@
 import { evaluateExpression } from "./evaluate";
 import { Expression } from "./parser";
+import { success } from "./result";
 
 function mockWarn() {
   return vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -47,7 +48,7 @@ describe("expression evaluation", () => {
       { col: 0, row: 0, callTree: ["root"] },
       (fName) =>
         fName === "hello"
-          ? (arg) => "hello, " + JSON.stringify(arg)
+          ? (arg) => success("hello, " + JSON.stringify(arg))
           : undefined,
       (_vName) => undefined,
     );
@@ -183,7 +184,8 @@ describe("expression evaluation", () => {
     const result = evaluateExpression(
       expr,
       { col: 0, row: 0, callTree: ["root"] },
-      (fName) => (fName === "hello" ? (arg) => "hello " + arg : undefined),
+      (fName) =>
+        fName === "hello" ? (arg) => success("hello " + arg) : undefined,
       (_vName) => undefined,
     );
 
@@ -204,7 +206,7 @@ describe("expression evaluation", () => {
     }
 
     expect(executionResult.issues).toHaveLength(0);
-    expect(executionResult.result).toEqual("hello people!")
+    expect(executionResult.result).toEqual("hello people!");
     expect(consoleWarnMock).toHaveBeenCalledTimes(0);
   });
 });
