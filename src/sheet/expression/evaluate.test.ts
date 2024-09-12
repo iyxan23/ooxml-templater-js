@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { createTemplaterFunction } from "../sheet-templater";
+import {
+  createTemplaterFunction,
+  createTemplaterNoArgsFunction,
+} from "../sheet-templater";
 import { evaluateExpression } from "./evaluate";
 import { Expression } from "./parser";
 import { success } from "./result";
@@ -262,8 +265,6 @@ describe("expression evaluation", () => {
       throw new Error(JSON.stringify(result));
     }
 
-    console.log(result.issues);
-
     expect(result.issues).toHaveLength(0);
     expect(result.result).toEqual("ret people!");
     expect(consoleWarnMock).toHaveBeenCalledTimes(0);
@@ -296,6 +297,57 @@ describe("expression evaluation", () => {
 
     expect(result.issues).toHaveLength(0);
     expect(result.result).toEqual("awesome!");
+
+    expect(consoleWarnMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("should be able to index objects", (test) => {
+    const consoleWarnMock = mockWarn();
+    test.onTestFinished(() => consoleWarnMock.mockRestore());
+
+    // [:var hello world [how] is it going]
+    const expr: Expression = {
+      type: "variableAccess",
+      identifier: "var",
+      args: [
+        "hello",
+        "world",
+        { type: "call", identifier: "getHow", args: [] },
+        "is",
+        "it",
+        "going",
+      ],
+    };
+
+    const result = evaluateExpression(
+      expr,
+      { col: 0, row: 0, callTree: ["root"] },
+      (fName) =>
+        fName === "getHow"
+          ? createTemplaterNoArgsFunction(() => "how").call
+          : undefined,
+      (vName) =>
+        vName === "var"
+          ? { hello: { world: { how: { is: { it: { going: "awesome!" } } } } } }
+          : undefined,
+    );
+
+    if (result.status === "failed") {
+      throw new Error(JSON.stringify(result));
+    }
+
+    expect(result.issues).toHaveLength(0);
+    expect(result.result).toEqual("awesome!");
+
+    expect(consoleWarnMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("should be able to execute a complex expression", (test) => {
+    const consoleWarnMock = mockWarn();
+    test.onTestFinished(() => consoleWarnMock.mockRestore());
+
+    // [join [map [:data] item { [:item] } ]]
+    const expr: Expression = {};
 
     expect(consoleWarnMock).toHaveBeenCalledTimes(0);
   });
