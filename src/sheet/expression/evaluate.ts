@@ -129,7 +129,7 @@ export function evaluateExpression(
       ]);
     }
 
-    return success(result, [...result.issues, ...issues]);
+    return success(result.result, [...result.issues, ...issues]);
   }
 
   // item is a variableAccess
