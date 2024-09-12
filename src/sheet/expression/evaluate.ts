@@ -28,13 +28,15 @@ export function evaluateExpression(
       ` to be in the evaluation stage.`,
     );
 
-    return success(undefined, {
-      col: context.col,
-      row: context.row,
-      message:
-        `expressions of type ${item.type} is not supposed to be` +
-        ` in the evaluation stage.`,
-    });
+    return success(undefined, [
+      {
+        col: context.col,
+        row: context.row,
+        message:
+          `expressions of type ${item.type} is not supposed to be` +
+          ` in the evaluation stage.`,
+      },
+    ]);
   }
 
   if (item.type === "lambda") {
