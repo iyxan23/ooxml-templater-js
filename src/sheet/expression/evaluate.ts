@@ -72,13 +72,7 @@ export function evaluateExpression(
           /* lookupVariable: */
           (varName) => localVars[varName] ?? lookupVariable(varName),
         ),
-      issues: [
-        {
-          col: context.col,
-          row: context.row,
-          message: `lambda expressions should not be used as the sole expression.`,
-        },
-      ],
+      issues: [],
     };
   }
 
