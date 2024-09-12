@@ -214,7 +214,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
       const evalResult = evaluateExpression(
         item,
-        context,
+        { ...context, callTree: ["<root>"] },
         (funcName) => this.functions[funcName]?.call,
         lookupVariable,
       );
