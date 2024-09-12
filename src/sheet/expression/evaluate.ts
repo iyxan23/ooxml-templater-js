@@ -1,5 +1,5 @@
 import { Expression } from "./parser";
-import { failure, Result, resultSymbol, success } from "./result";
+import { Result, success } from "./result";
 
 export type Issue = {
   col: number;
