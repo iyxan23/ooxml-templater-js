@@ -5,10 +5,10 @@ import { z } from "zod";
 import {
   evaluateExpression,
   Issue,
-  Result,
-  resultSymbol,
   TemplaterFunction,
 } from "./expression/evaluate";
+import { resultSymbol, success } from "./expression/result";
+import { Result } from "./expression/result";
 
 interface TemplatableCell {
   getTextContent(): string;
@@ -24,6 +24,16 @@ export function createTemplaterNoArgsFunction<T extends z.ZodTuple, R>(
   };
 }
 
+/**
+ * Please note that the result of a lambda call is a form of `Result<any>`,
+ * which has the following structure:
+ *
+ * ```
+ * export type Result<T> =
+ *   | { status: "success"; result: T; issues: Issue[]; sym: ResultSymbol }
+ *   | { status: "failed"; issues: Issue[]; error: Issue; sym: ResultSymbol };
+ * ```
+ */
 export function callLambda(
   f: Function,
 ): (opts: {
@@ -38,6 +48,7 @@ export function callLambda(
 }
 
 /**
+ * ## Calling a lambda
  * To call a lambda, use `z.function()` as arg, but call
  * `callLambda(theFunc)()` to call the lambda.
  *
@@ -60,11 +71,24 @@ export function callLambda(
  *     (vName) => vName === "myVar" ? "hello" : undefined
  * })
  * ```
+ *
+ * ## Return
+ *
+ * The caller of this function should return a `Result<any>` value, which can
+ * represent a successful or failed execution. It's also possible to include
+ * issues in the result, which will be handled by the caller at the upmost
+ * level.
+ *
+ * If you're working with lambdas, it's highly recommended to collect the
+ * `issues` returned by a lambda call, and accumulate them into a list, where
+ * it will be included in this function's `Result<any>` return value.
+ *
+ * See `success(...)`, and `failure(...)` to easily create `Result<any>` objects.
  */
-export function createTemplaterFunction<T extends z.ZodTuple, R>(
-  schema: T,
-  call: (...args: z.infer<T>) => R,
-): TemplaterFunction<R> {
+export function createTemplaterFunction<
+  T extends z.ZodTuple,
+  R extends Result<any>,
+>(schema: T, call: (...args: z.infer<T>) => R): TemplaterFunction<R> {
   return {
     call: (funcName, ...args: any) => {
       const result = schema.safeParse(args);
@@ -90,7 +114,9 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
   private functions: Record<string, TemplaterFunction<any>> = {
     helloWorld: createTemplaterNoArgsFunction(() => "hello world"),
-    testLambda: createTemplaterFunction(z.tuple([z.function()]), (a) => a()),
+    testLambda: createTemplaterFunction(z.tuple([z.function()]), (a) =>
+      success(a()),
+    ),
   };
 
   constructor(
@@ -152,12 +178,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       issues.push(...result.issues);
 
       if (result.status === "failed") {
-        return {
-          sym: resultSymbol,
-          status: "failed",
-          issues,
-          error: result.error,
-        };
+        return result;
       }
 
       globalVariables[expr.identifier] = result.result;
