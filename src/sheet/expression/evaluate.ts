@@ -15,7 +15,9 @@ export type TemplaterFunction<R> = {
 export function evaluateExpression(
   item: Expression,
   context: { col: number; row: number; callTree: string[] },
-  lookupFunction: (funcName: string) => ((...args: any[]) => any) | undefined,
+  lookupFunction: (
+    funcName: string,
+  ) => ((...args: any[]) => Result<any>) | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<any | undefined> {
   if (
@@ -106,8 +108,14 @@ export function evaluateExpression(
 
     let result = func.call(item.identifier, ...funcArgs);
 
-    if (typeof result !== "string") {
-      result = JSON.stringify(result);
+    if (result.status === "failed") {
+      return result;
+    }
+
+    let resultData = result.result;
+
+    if (typeof resultData !== "string") {
+      resultData = JSON.stringify(resultData);
 
       return success(result, [
         ...issues,
@@ -121,7 +129,7 @@ export function evaluateExpression(
       ]);
     }
 
-    return success(result, issues);
+    return success(result, [...result.issues, ...issues]);
   }
 
   // item is a variableAccess
