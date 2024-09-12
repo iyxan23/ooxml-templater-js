@@ -150,6 +150,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     const parsedExpressions = this.parseExpressions();
 
     // stage 1: extract hoists and blocks
+    // @ts-expect-error
     const { variableHoists, blocks } =
       extractHoistsAndBlocks(parsedExpressions);
 
@@ -192,6 +193,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     };
   }
 
+  // @ts-expect-error will be used later
   private evaluateExpression(
     cell: ExpressionCell,
     sheetCell: SheetT,
