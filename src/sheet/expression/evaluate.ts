@@ -102,6 +102,8 @@ export function evaluateExpression(
       if (result.status === "failed") {
         return result;
       }
+
+      funcArgs.push(result.result);
     }
 
     const func = lookupFunction(item.identifier);
@@ -122,7 +124,7 @@ export function evaluateExpression(
       };
     }
 
-    let result = func.call(item.identifier, ...item.args);
+    let result = func.call(item.identifier, ...funcArgs);
 
     if (typeof result !== "string") {
       result = JSON.stringify(result);
