@@ -20,13 +20,17 @@ describe("extractHoistsAndBlocks", () => {
     expect(collected).toEqual({
       variableHoists: [
         {
-          identifier: "hello",
-          type: "variableHoist",
-          expression: {
-            type: "call",
-            identifier: "string",
-            args: ["hello", "world"],
+          expr: {
+            identifier: "hello",
+            type: "variableHoist",
+            expression: {
+              type: "call",
+              identifier: "string",
+              args: ["hello", "world"],
+            },
           },
+          col: 1,
+          row: 0,
         },
       ],
       blocks: [],
