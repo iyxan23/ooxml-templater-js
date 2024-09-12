@@ -18,7 +18,12 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "noPropertyAccessFromIndexSignature": true,
-    "noImplicitOverride": true,
+    "noImplicitOverride": true
   },
-  "include": ["src/"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
 }
