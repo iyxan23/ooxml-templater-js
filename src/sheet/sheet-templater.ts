@@ -24,52 +24,50 @@ export function createTemplaterNoArgsFunction<T extends z.ZodTuple, R>(
   };
 }
 
+export function callLambda(
+  f: Function,
+): (opts: {
+  variables?: Record<string, any>;
+  customVariableResolver?: (variableName: string) => any;
+}) => Result<any> {
+  return (opts) =>
+    f(
+      (vName: string) =>
+        opts.customVariableResolver?.(vName) ?? opts.variables?.[vName],
+    );
+}
+
+/**
+ * To call a lambda, use `z.function()` as arg, but call
+ * `callLambda(theFunc)()` to call the lambda.
+ *
+ * It's possible specify local variables that will only be defined within the
+ * lambda by passing a `Record<string, any>` on the field `variables` to the
+ * function returned by `callLambda`, as such:
+ *
+ * ```
+ * callLambda(theFunc)({ variables: { index: 0 } })
+ * ```
+ *
+ * The variable `index` will be defined within the lambda.
+ *
+ * It's also possible to provide variables through a function instead of
+ * passing a Record, use the `customVariableResolver`:
+ *
+ * ```
+ * callLambda(theFunc)({
+ *   customVariableResolver:
+ *     (vName) => vName === "myVar" ? "hello" : undefined
+ * })
+ * ```
+ */
 export function createTemplaterFunction<T extends z.ZodTuple, R>(
   schema: T,
   call: (...args: z.infer<T>) => R,
 ): TemplaterFunction<R> {
   return {
     call: (funcName, ...args: any) => {
-      // proxy function args
-      const proxyLambdaFunctions =
-        (call: (...args: any[]) => any) =>
-          (...args: any[]): any => {
-            const executionResult = call(args);
-
-            if (executionResult.sym === resultSymbol) {
-              // this is a result object from a lambda
-              const resultObj = executionResult as Result<any>;
-
-              if (resultObj.status === "failed") {
-                throw new Error(
-                  `failed to execute lambda \`${funcName}\` from calling the ` +
-                  `function \`${funcName}\` at column ${resultObj.error.col} ` +
-                  `row ${resultObj.error.row}: ${resultObj.error.message}`,
-                );
-              }
-
-              // todo: make it possible to collect issues here rather than
-              //       doing console warns
-
-              for (const issue of resultObj.issues) {
-                console.warn(
-                  `issue while executing lambda \`${funcName}\` from calling` +
-                  `the function \`${funcName}\` at column ${issue.col} ` +
-                  `row ${issue.row}: ${issue.message}`,
-                );
-              }
-
-              return resultObj.result;
-            } else {
-              return executionResult;
-            }
-          };
-
-      const proxiedArgs = args.map((arg: any) =>
-        typeof arg !== "function" ? arg : proxyLambdaFunctions(arg),
-      );
-
-      const result = schema.safeParse(proxiedArgs);
+      const result = schema.safeParse(args);
 
       if (!result.success) {
         throw new Error(

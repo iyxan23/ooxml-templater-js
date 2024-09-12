@@ -60,7 +60,7 @@ export function evaluateExpression(
     return {
       sym: resultSymbol,
       status: "success",
-      result: (localVars: Record<string, any>) =>
+      result: (lookupLocalVariable: (name: string) => any) =>
         evaluateExpression(
           item.expression,
           {
@@ -70,7 +70,7 @@ export function evaluateExpression(
           lookupFunction,
 
           /* lookupVariable: */
-          (varName) => localVars[varName] ?? lookupVariable(varName),
+          (varName) => lookupLocalVariable(varName) ?? lookupVariable(varName),
         ),
       issues: [],
     };
