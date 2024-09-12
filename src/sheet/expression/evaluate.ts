@@ -31,7 +31,7 @@ export function evaluateExpression(
   ) {
     console.warn(
       `at col ${context.col} ${context.row} ${item.type} is not supposed` +
-      ` to be in the evaluation stage.`,
+        ` to be in the evaluation stage.`,
     );
 
     return success(undefined, [
@@ -134,5 +134,54 @@ export function evaluateExpression(
     ]);
   }
 
-  return success(variable);
+  // also get its args and index with them
+
+  const indexes = [];
+  const issues = [];
+
+  for (const arg of item.args) {
+    if (typeof arg === "string") {
+      indexes.push(arg);
+      continue;
+    }
+
+    const result = evaluateExpression(
+      arg,
+      {
+        ...context,
+        callTree: [
+          ...context.callTree,
+          `variable index access \`${item.identifier}\``,
+        ],
+      },
+      lookupFunction,
+      lookupVariable,
+    );
+
+    if (result.status === "failed") {
+      return result;
+    }
+
+    issues.push(...result.issues);
+    indexes.push(result.result);
+  }
+
+  // try to access the variable given the indexes
+  let ret = variable;
+  for (const index of indexes) {
+    if (ret === undefined || ret === null) {
+      return success(undefined, [
+        ...issues,
+        {
+          col: context.col,
+          row: context.row,
+          message: `value indexed on \`${item.identifier}\`.${indexes.join(".")} is not defined.`,
+        },
+      ]);
+    }
+
+    ret = ret[index];
+  }
+
+  return success(ret);
 }

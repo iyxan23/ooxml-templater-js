@@ -246,14 +246,14 @@ describe("expression evaluation", () => {
       (fName) =>
         fName === "call"
           ? createTemplaterFunction(z.tuple([z.function()]), (s) => {
-            return s((vName: string) =>
-              vName === "world" ? "people!" : undefined,
-            );
-          }).call
+              return s((vName: string) =>
+                vName === "world" ? "people!" : undefined,
+              );
+            }).call
           : fName === "ret"
             ? createTemplaterFunction(z.tuple([z.string()]), (s) => {
-              return success(`ret ${s}`);
-            }).call
+                return success(`ret ${s}`);
+              }).call
             : undefined,
       (_vName) => undefined,
     );
@@ -266,6 +266,37 @@ describe("expression evaluation", () => {
 
     expect(result.issues).toHaveLength(0);
     expect(result.result).toEqual("ret people!");
+    expect(consoleWarnMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("should be able to index objects", (test) => {
+    const consoleWarnMock = mockWarn();
+    test.onTestFinished(() => consoleWarnMock.mockRestore());
+
+    // [:var hello world how is it going]
+    const expr: Expression = {
+      type: "variableAccess",
+      identifier: "var",
+      args: ["hello", "world", "how", "is", "it", "going"],
+    };
+
+    const result = evaluateExpression(
+      expr,
+      { col: 0, row: 0, callTree: ["root"] },
+      (_fName) => undefined,
+      (vName) =>
+        vName === "var"
+          ? { hello: { world: { how: { is: { it: { going: "awesome!" } } } } } }
+          : undefined,
+    );
+
+    if (result.status === "failed") {
+      throw new Error(JSON.stringify(result));
+    }
+
+    expect(result.issues).toHaveLength(0);
+    expect(result.result).toEqual("awesome!");
+
     expect(consoleWarnMock).toHaveBeenCalledTimes(0);
   });
 });
