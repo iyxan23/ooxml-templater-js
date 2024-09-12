@@ -1,9 +1,10 @@
 import { z } from "zod";
 import {
+  callLambda,
   createTemplaterFunction,
   createTemplaterNoArgsFunction,
 } from "../sheet-templater";
-import { evaluateExpression } from "./evaluate";
+import { evaluateExpression, Issue } from "./evaluate";
 import { Expression } from "./parser";
 import { success } from "./result";
 
@@ -346,9 +347,91 @@ describe("expression evaluation", () => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
-    // [join [map [:data] item { [:item] } ]]
-    const expr: Expression = {};
+    // [join [map [:students] item { [:item fullName] } ] ", "]
+    const expr: Expression = {
+      type: "call",
+      identifier: "join",
+      args: [
+        {
+          type: "call",
+          identifier: "map",
+          args: [
+            {
+              type: "variableAccess",
+              identifier: "students",
+              args: [],
+            },
+            "item",
+            {
+              type: "lambda",
+              expression: {
+                type: "variableAccess",
+                identifier: "item",
+                args: ["fullName"],
+              },
+            },
+          ],
+        },
+        ", ",
+      ],
+    };
 
+    const result = evaluateExpression(
+      expr,
+      { col: 0, row: 0, callTree: ["root"] },
+      (fName) =>
+        ({
+          map: createTemplaterFunction(
+            z.tuple([z.array(z.any()), z.string(), z.function()]),
+            (arr, ident, fn) => {
+              const fnLambda = callLambda(fn);
+              const r: any[] = [];
+              const issues: Issue[] = [];
+
+              for (const item of arr) {
+                const result = fnLambda({ variables: { [ident]: item } });
+
+                if (result.status === "failed") return result;
+
+                r.push(result.result);
+                issues.push(...result.issues);
+              }
+
+              return success(r, issues);
+            },
+          ).call,
+          join: createTemplaterFunction(
+            z.tuple([z.array(z.string()), z.string()]),
+            (strings, sep) => {
+              return success(strings.join(sep));
+            },
+          ).call,
+        })[fName],
+      (vName) =>
+        vName === "students"
+          ? [
+              {
+                fullName: "John Doe",
+              },
+              {
+                fullName: "Jane Doe",
+              },
+              {
+                fullName: "Mark Doe",
+              },
+              {
+                fullName: "Mary Doe",
+              },
+            ]
+          : undefined,
+    );
+
+    if (result.status === "failed") {
+      throw new Error(JSON.stringify(result));
+    }
+
+    expect(result.issues).toHaveLength(0);
+    expect(result.result).toEqual("John Doe, Jane Doe, Mark Doe, Mary Doe");
     expect(consoleWarnMock).toHaveBeenCalledTimes(0);
   });
 });
