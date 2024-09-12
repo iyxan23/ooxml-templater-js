@@ -6,6 +6,7 @@ import {
   evaluateExpression,
   Issue,
   Result,
+  resultSymbol,
   TemplaterFunction,
 } from "./expression/evaluate";
 
@@ -29,7 +30,46 @@ export function createTemplaterFunction<T extends z.ZodTuple, R>(
 ): TemplaterFunction<R> {
   return {
     call: (funcName, ...args: any) => {
-      const result = schema.safeParse(args);
+      // proxy function args
+      const proxyLambdaFunctions =
+        (call: (...args: any[]) => any) =>
+          (...args: any[]): any => {
+            const executionResult = call(args);
+
+            if (executionResult.sym === resultSymbol) {
+              // this is a result object from a lambda
+              const resultObj = executionResult as Result<any>;
+
+              if (resultObj.status === "failed") {
+                throw new Error(
+                  `failed to execute lambda \`${funcName}\` from calling the ` +
+                  `function \`${funcName}\` at column ${resultObj.error.col} ` +
+                  `row ${resultObj.error.row}: ${resultObj.error.message}`,
+                );
+              }
+
+              // todo: make it possible to collect issues here rather than
+              //       doing console warns
+
+              for (const issue of resultObj.issues) {
+                console.warn(
+                  `issue while executing lambda \`${funcName}\` from calling` +
+                  `the function \`${funcName}\` at column ${issue.col} ` +
+                  `row ${issue.row}: ${issue.message}`,
+                );
+              }
+
+              return resultObj.result;
+            } else {
+              return executionResult;
+            }
+          };
+
+      const proxiedArgs = args.map((arg: any) =>
+        typeof arg !== "function" ? arg : proxyLambdaFunctions(arg),
+      );
+
+      const result = schema.safeParse(proxiedArgs);
 
       if (!result.success) {
         throw new Error(
@@ -115,6 +155,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
       if (result.status === "failed") {
         return {
+          sym: resultSymbol,
           status: "failed",
           issues,
           error: result.error,
@@ -125,6 +166,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
 
     return {
+      sym: resultSymbol,
       status: "success",
       result: undefined,
       issues,
@@ -168,6 +210,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
 
     return {
+      sym: resultSymbol,
       status: "success",
       result: sheetCell.cloneWithTextContent(result),
       issues,

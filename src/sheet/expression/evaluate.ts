@@ -1,14 +1,18 @@
 import { Expression } from "./parser";
 
+export const resultSymbol = Symbol("result");
+export type ResultSymbol = typeof resultSymbol;
+
 export type Issue = {
   col: number;
   row: number;
   message: string;
   index?: number;
 };
+
 export type Result<T> =
-  | { status: "success"; result: T; issues: Issue[] }
-  | { status: "failed"; issues: Issue[]; error: Issue };
+  | { status: "success"; result: T; issues: Issue[]; sym: ResultSymbol }
+  | { status: "failed"; issues: Issue[]; error: Issue; sym: ResultSymbol };
 
 export type TemplaterFunction<R> = {
   call: (funcName: string, ...args: any[]) => R;
@@ -31,6 +35,7 @@ export function evaluateExpression(
     );
 
     return {
+      sym: resultSymbol,
       status: "success",
       result: undefined,
       issues: [
@@ -46,26 +51,27 @@ export function evaluateExpression(
   }
 
   if (item.type === "lambda") {
+    // please really do note that lambda expressions return a simple function
+    // that takes a record of local variables to be applied within this scope
+    //
+    // the return type is of type Issue<any>, which could be a "failed" (known
+    // from `.status`) execution, due to the nature of interpreted languages.
+    // there could also be issues that can be seen from `.status`.
     return {
+      sym: resultSymbol,
       status: "success",
-      result: (...args: any[]) => {
-        const result = evaluateExpression(
+      result: (localVars: Record<string, any>) =>
+        evaluateExpression(
           item.expression,
           {
             ...context,
             callTree: [...context.callTree, "lambda"],
           },
           lookupFunction,
-          lookupVariable,
-        );
 
-        if (result.status === "failed") {
-          // todo: gracefully return with a failed info
-          throw new Error("inner lambda failed to execute");
-        }
-
-        return result.result;
-      },
+          /* lookupVariable: */
+          (varName) => localVars[varName] ?? lookupVariable(varName),
+        ),
       issues: [
         {
           col: context.col,
@@ -108,6 +114,7 @@ export function evaluateExpression(
 
     if (!func) {
       return {
+        sym: resultSymbol,
         status: "success",
         result: undefined,
         issues: [
@@ -127,6 +134,7 @@ export function evaluateExpression(
       result = JSON.stringify(result);
 
       return {
+        sym: resultSymbol,
         status: "success",
         result,
         issues: [
@@ -143,6 +151,7 @@ export function evaluateExpression(
     }
 
     return {
+      sym: resultSymbol,
       status: "success",
       result,
       issues,
@@ -154,6 +163,7 @@ export function evaluateExpression(
   const variable = lookupVariable(item.identifier);
   if (!variable) {
     return {
+      sym: resultSymbol,
       status: "success",
       result: undefined,
       issues: [
@@ -167,6 +177,7 @@ export function evaluateExpression(
   }
 
   return {
+    sym: resultSymbol,
     status: "success",
     result: variable,
     issues: [],
