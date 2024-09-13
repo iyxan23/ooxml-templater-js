@@ -214,4 +214,99 @@ describe("SheetTemplater", () => {
     expect(result.issues).toHaveLength(0);
     expect(result.result.getSheet()).toEqual([[cell("465")]]);
   });
+
+  it("can hoist variables and use them", () => {
+    const sheet = new Sheet<TemplatableCell>([
+      [cell("[:personOne]"), cell("[greet [:personOne]]")],
+      [cell("[:personTwo]"), cell("[greet [:personTwo]]")],
+      [cell('[hoist personTwo [concat [:personOne] " version two :)"]]')],
+    ]);
+
+    const templater = new SheetTemplater(sheet, {
+      functions: {
+        greet: createTemplaterFunction(z.tuple([z.any()]), (name) =>
+          success(`hello, ${name}`),
+        ),
+        concat: createTemplaterFunction(
+          z.tuple([z.string(), z.string()]),
+          (a, b) => success(`${a}${b}`),
+        ),
+      },
+    });
+
+    const result = templater.interpret({ personOne: "iyxan" });
+
+    if (result.status === "failed") {
+      throw result.error;
+    }
+
+    expect(result.issues).toHaveLength(0);
+    expect(result.result.getSheet()).toEqual([
+      [cell("iyxan"), cell("hello, iyxan")],
+      [cell("iyxan version two :)"), cell("hello, iyxan version two :)")],
+      [cell(""), null],
+    ]);
+  });
+
+  it("do a repeatRow", () => {
+    const sheet = new Sheet<TemplatableCell>([
+      [cell("No."), cell("Full Name"), cell("Age"), cell("GPA")],
+      [
+        cell("[#repeatRow [length [:students]] idx][add [:idx] 1]."),
+        cell("[:students [:idx] fullName]"),
+        cell("[:students [:idx] age]"),
+        cell("[:students [:idx] gpa][/#repeatRow]"),
+      ],
+    ]);
+
+    const templater = new SheetTemplater(sheet, {
+      functions: {
+        add: createTemplaterFunction(
+          z.tuple([z.any(), z.coerce.number()]),
+          (a, b) => success(a + b),
+        ),
+        length: createTemplaterFunction(z.tuple([z.array(z.any())]), (a) =>
+          success(a.length),
+        ),
+      },
+    });
+
+    const result = templater.interpret({
+      students: [
+        {
+          fullName: "John",
+          age: 57,
+          gpa: 21,
+        },
+        {
+          fullName: "Mark",
+          age: 93,
+          gpa: 100,
+        },
+        {
+          fullName: "Elon",
+          age: 102,
+          gpa: 83,
+        },
+        {
+          fullName: "Gates",
+          age: 83,
+          gpa: 73,
+        },
+      ],
+    });
+
+    if (result.status === "failed") {
+      throw result.error;
+    }
+
+    expect(result.issues).toHaveLength(0);
+    expect(result.result.getSheet()).toEqual([
+      [cell("No."), cell("Full Name"), cell("Age"), cell("GPA")],
+      [cell("1."), cell("John"), cell("57"), cell("21")],
+      [cell("2."), cell("Mark"), cell("93"), cell("100")],
+      [cell("3."), cell("Elon"), cell("102"), cell("83")],
+      [cell("4."), cell("Gates"), cell("83"), cell("73")],
+    ]);
+  });
 });
