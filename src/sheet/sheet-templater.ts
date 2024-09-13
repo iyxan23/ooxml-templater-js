@@ -12,10 +12,10 @@ import { resultSymbol, success } from "./expression/result";
 import { Result } from "./expression/result";
 import * as deepmerge from "deepmerge";
 
-interface TemplatableCell {
+export interface TemplatableCell {
   getTextContent(): string;
-  editTextContent(content: string): this;
-  cloneWithTextContent(content: string): this;
+  editTextContent(content: string): ThisType<this>;
+  cloneWithTextContent(content: string): ThisType<this>;
 }
 
 export function createTemplaterNoArgsFunction<R>(
@@ -386,7 +386,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     return {
       sym: resultSymbol,
       status: "success",
-      result: sheetCell.cloneWithTextContent(result),
+      result: sheetCell.cloneWithTextContent(result) as SheetT,
       issues,
     };
   }
