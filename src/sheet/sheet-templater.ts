@@ -395,7 +395,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     sheet: Sheet<SheetT>,
   ): Sheet<[ExpressionCell, SheetT]> {
     const expressionSheet = new Sheet<[ExpressionCell, SheetT]>();
-    const theSheet = this.sheet.getSheet();
+    const theSheet = sheet.getSheet();
 
     for (let r = 0; r < theSheet.length; r++) {
       for (let c = 0; c < theSheet[0]!.length; c++) {
