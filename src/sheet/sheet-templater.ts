@@ -227,9 +227,9 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
         const result = this.evaluateExpressionCell(exprCell, sheetCell, {
           context: { col, row },
           lookupVariable: (name) =>
-            data[name] ??
+            localVariables[row]?.[col]?.[name] ??
             globalVariables[name] ??
-            localVariables[row]?.[col]?.[name],
+            data[name],
         });
 
         if (result.status === "failed") return result;
