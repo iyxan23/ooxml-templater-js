@@ -1,4 +1,3 @@
-import { Sheet } from "../sheet";
 import type { ExpressionCell, Expression } from "./parser";
 
 // one thing to keep in mind: in a single cell, there cannot be multiple
