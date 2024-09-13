@@ -41,12 +41,12 @@ type NestedOmit<
   Path extends string,
 > = Path extends `${infer Head}.${infer Tail}`
   ? Head extends keyof Schema
-    ? {
-        [K in keyof Schema]: K extends Head
-          ? NestedOmit<Schema[K], Tail>
-          : Schema[K];
-      }
-    : Schema
+  ? {
+    [K in keyof Schema]: K extends Head
+    ? NestedOmit<Schema[K], Tail>
+    : Schema[K];
+  }
+  : Schema
   : Omit<Schema, Path>;
 
 // This is stage 1 of the expression interpreter
@@ -61,7 +61,9 @@ type NestedOmit<
 //
 // then returns both the hoists and the blocks that exists in this sheet
 export function extractHoistsAndBlocks(
-  expressionSheet: Sheet<ExpressionCell>,
+  sheetBounds: { rowBound: number; colBound: number },
+  getCell: (col: number, row: number) => ExpressionCell | null,
+  setCell: (col: number, row: number, data: ExpressionCell) => void,
 ): {
   variableHoists: {
     expr: Extract<Expression, { type: "variableHoist" }>;
@@ -78,7 +80,6 @@ export function extractHoistsAndBlocks(
 
   const blocks: Block[] = [];
 
-  const sheetBounds = expressionSheet.getBounds();
   let row = 0;
   let col = 0;
 
@@ -109,7 +110,7 @@ export function extractHoistsAndBlocks(
 
       // go to cells to the right, until we encounter a blockEnd with the same identifier [/#repeatRow]
       while (col <= sheetBounds.colBound) {
-        const cell = expressionSheet.getCell(col, row);
+        const cell = getCell(col, row);
         if (cell === null) {
           col++;
           continue;
@@ -121,7 +122,7 @@ export function extractHoistsAndBlocks(
           endBlocks,
           jumpTo,
         } = parseCell(cell, col, row);
-        expressionSheet.setCell(col, row, result);
+        setCell(col, row, result);
         innerBlocks.push(...blocks);
 
         if (jumpTo) {
@@ -172,7 +173,7 @@ export function extractHoistsAndBlocks(
 
       // go to cells to the right, until we encounter a blockEnd with the same identifier [/#repeatCol]
       while (row <= sheetBounds.rowBound) {
-        const cell = expressionSheet.getCell(col, row);
+        const cell = getCell(col, row);
         if (cell === null) {
           row++;
           continue;
@@ -184,7 +185,7 @@ export function extractHoistsAndBlocks(
           endBlocks,
           jumpTo,
         } = parseCell(cell, col, row);
-        expressionSheet.setCell(col, row, result);
+        setCell(col, row, result);
         innerBlocks.push(...blocks);
 
         if (jumpTo) {
@@ -263,7 +264,7 @@ export function extractHoistsAndBlocks(
         if (parsedABlock)
           throw new Error(
             "cannot have two startBlock expressions in the same cell, this" +
-              " is a limitation of the current implementation.",
+            " is a limitation of the current implementation.",
           );
 
         const { block, jumpTo: blockJumpTo } = parseBlock(item, col, row);
@@ -298,7 +299,7 @@ export function extractHoistsAndBlocks(
 
   while (row <= sheetBounds.rowBound) {
     while (col <= sheetBounds.colBound) {
-      const cell = expressionSheet.getCell(col, row);
+      const cell = getCell(col, row);
       if (cell === null) {
         col++;
         continue;
@@ -309,7 +310,7 @@ export function extractHoistsAndBlocks(
         blocks: newBlocks,
         jumpTo,
       } = parseCell(cell, col, row);
-      expressionSheet.setCell(col, row, result);
+      setCell(col, row, result);
       if (jumpTo) {
         // jumpTo is here to prevent us from reading the same cells twice
         col = jumpTo.col;

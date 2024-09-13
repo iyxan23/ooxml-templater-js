@@ -152,13 +152,20 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
   }
 
-  interpret(data: any): Result<undefined> {
+  interpret(data: any): Result<Sheet<SheetT>> {
     const issues = [];
-    const parsedExpressions = this.parseExpressions();
+    const parsedExpressions = this.parseExpressions(this.sheet);
 
     // stage 1: extract hoists and blocks
-    const { variableHoists, blocks } =
-      extractHoistsAndBlocks(parsedExpressions);
+    const { variableHoists, blocks } = extractHoistsAndBlocks(
+      parsedExpressions.getBounds(),
+      (col, row) => parsedExpressions.getCell(col, row)?.[0] ?? null,
+      (col, row, data) =>
+        parsedExpressions.setCell(col, row, [
+          data,
+          parsedExpressions.getCell(col, row)?.[1]!,
+        ]),
+    );
 
     // stage 2: evaluate variable hoists
     const globalVariables: Record<string, any> = {};
@@ -167,7 +174,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       if (sheetCell === null) {
         throw new Error(
           `cannot find the cell referenced by variable hoist on` +
-            ` col ${col} row ${row}`,
+          ` col ${col} row ${row}`,
         );
       }
 
@@ -192,18 +199,50 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
 
     // stage 3: block expansion
-    // @ts-expect-error will be used later
-    const localVariables = this.expandBlocks(
+    const expandBlocksResult = this.expandBlocks(
       parsedExpressions,
       blocks,
       (fName) => this.functions[fName]?.call,
       (vName) => globalVariables[vName] ?? data[vName],
     );
 
+    if (expandBlocksResult.status === "failed") return expandBlocksResult;
+    issues.push(...expandBlocksResult.issues);
+
+    const localVariables = expandBlocksResult.result;
+
+    // stage 4: execution
+    const bounds = parsedExpressions.getBounds();
+    parsedExpressions.optimizeSheet(bounds);
+
+    const resultSheet = new Sheet<SheetT>();
+
+    for (let row = 0; row <= bounds.rowBound; row++) {
+      for (let col = 0; col <= bounds.colBound; col++) {
+        const cell = parsedExpressions.getCell(col, row);
+        if (cell === null) continue;
+
+        const [exprCell, sheetCell] = cell;
+
+        const result = this.evaluateExpressionCell(exprCell, sheetCell, {
+          context: { col, row },
+          lookupVariable: (name) =>
+            data[name] ??
+            globalVariables[name] ??
+            localVariables[row]?.[col]?.[name],
+        });
+
+        if (result.status === "failed") return result;
+        issues.push(...result.issues);
+
+        resultSheet.setCell(col, row, result.result);
+      }
+    }
+
     return {
       sym: resultSymbol,
       status: "success",
-      result: undefined,
+      result: resultSheet,
       issues,
     };
   }
@@ -352,8 +391,10 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     };
   }
 
-  private parseExpressions(): Sheet<ExpressionCell> {
-    const expressionSheet = new Sheet<ExpressionCell>();
+  private parseExpressions(
+    sheet: Sheet<SheetT>,
+  ): Sheet<[ExpressionCell, SheetT]> {
+    const expressionSheet = new Sheet<[ExpressionCell, SheetT]>();
     const theSheet = this.sheet.getSheet();
 
     for (let r = 0; r < theSheet.length; r++) {
@@ -365,7 +406,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
         // skip if there are no expressions
         if (!expressionCell.some((c) => typeof c === "object")) continue;
 
-        expressionSheet.setCell(c, r, expressionCell);
+        expressionSheet.setCell(c, r, [expressionCell, cell]);
       }
     }
 
