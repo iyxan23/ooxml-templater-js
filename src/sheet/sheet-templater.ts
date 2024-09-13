@@ -179,7 +179,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       }
 
       const result = evaluateExpression(
-        expr,
+        expr.expression,
         {
           col,
           row,
