@@ -10,7 +10,7 @@ import {
 } from "./expression/evaluate";
 import { resultSymbol, success } from "./expression/result";
 import { Result } from "./expression/result";
-import * as deepmerge from "deepmerge";
+import deepmerge from "deepmerge";
 
 export interface TemplatableCell {
   getTextContent(): string;
