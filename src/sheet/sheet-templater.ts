@@ -395,11 +395,11 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     sheet: Sheet<SheetT>,
   ): Sheet<[ExpressionCell, SheetT]> {
     const expressionSheet = new Sheet<[ExpressionCell, SheetT]>();
-    const theSheet = sheet.getSheet();
+    const bounds = sheet.getBounds();
 
-    for (let r = 0; r < theSheet.length; r++) {
-      for (let c = 0; c < theSheet[0]!.length; c++) {
-        const cell = theSheet[r]![c];
+    for (let r = 0; r <= bounds.rowBound; r++) {
+      for (let c = 0; c <= bounds.colBound; c++) {
+        const cell = sheet.getCell(c, r);
         if (!cell) continue;
 
         const expressionCell = parseExpressionCell(cell.getTextContent());
