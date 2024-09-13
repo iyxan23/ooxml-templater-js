@@ -124,7 +124,7 @@ export function evaluateExpression(
   // item is a variableAccess
 
   const variable = lookupVariable(item.identifier);
-  if (!variable) {
+  if (variable === undefined) {
     return success(undefined, [
       {
         col: context.col,
