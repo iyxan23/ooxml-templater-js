@@ -403,9 +403,6 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
         if (!cell) continue;
 
         const expressionCell = parseExpressionCell(cell.getTextContent());
-        // skip if there are no expressions
-        if (!expressionCell.some((c) => typeof c === "object")) continue;
-
         expressionSheet.setCell(c, r, [expressionCell, cell]);
       }
     }
