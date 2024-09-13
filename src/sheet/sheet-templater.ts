@@ -294,53 +294,79 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       const repeatAmount = repeatAmountResult.result;
 
       if (block.identifier === "repeatRow") {
-        for (let i = 0; i < repeatAmount; i++) {
-          sheet.cloneMapRow({
-            row: block.start.row,
-            colStart: block.start.col,
-            colEnd: block.end.col,
-            count: repeatAmount,
-            map: ({ relativeCol, relativeRow, previousData }) => {
-              const row = block.start.row + relativeRow;
-              const col = block.start.col + relativeCol;
-              const ident = block.indexVariableIdentifier;
+        const ident = block.indexVariableIdentifier;
+        const row = block.start.row;
 
-              if (!localVariables[row]) {
-                localVariables[row] = { [col]: { [ident]: i } };
-              } else if (!localVariables[row][col]) {
-                localVariables[row][col] = { [ident]: i };
-              } else if (!localVariables[row][col][ident]) {
-                localVariables[row][col][ident] = i;
-              }
-
-              return previousData;
-            },
-          });
+        // first row
+        for (let col = block.start.col; col < block.end.col + 1; col++) {
+          if (!localVariables[row]) {
+            localVariables[row] = { [col]: { [ident]: 0 } };
+          } else if (!localVariables[row][col]) {
+            localVariables[row][col] = { [ident]: 0 };
+          } else if (!localVariables[row][col]?.[ident]) {
+            localVariables[row][col]![ident] = 0;
+          }
         }
+
+        // the rest of the rows
+        sheet.cloneMapRow({
+          row,
+          colStart: block.start.col,
+          colEnd: block.end.col + 1,
+          count: repeatAmount - 1, // exclude the first row
+          map: ({ relativeCol, relativeRow, previousData }) => {
+            const num = relativeRow + 1;
+            const row = block.start.row + num;
+            const col = block.start.col + relativeCol;
+
+            if (!localVariables[row]) {
+              localVariables[row] = { [col]: { [ident]: num } };
+            } else if (!localVariables[row][col]) {
+              localVariables[row][col] = { [ident]: num };
+            } else if (!localVariables[row][col][ident]) {
+              localVariables[row][col][ident] = num;
+            }
+
+            return previousData;
+          },
+        });
       } else if (block.identifier === "repeatCol") {
-        for (let i = 0; i < repeatAmount; i++) {
-          sheet.cloneMapCol({
-            col: block.start.col,
-            rowStart: block.start.row,
-            rowEnd: block.end.row,
-            count: repeatAmount,
-            map: ({ relativeCol, relativeRow, previousData }) => {
-              const row = block.start.row + relativeRow;
-              const col = block.start.col + relativeCol;
-              const ident = block.indexVariableIdentifier;
+        const ident = block.indexVariableIdentifier;
+        const col = block.start.col;
 
-              if (!localVariables[row]) {
-                localVariables[row] = { [col]: { [ident]: i } };
-              } else if (!localVariables[row][col]) {
-                localVariables[row][col] = { [ident]: i };
-              } else if (!localVariables[row][col][ident]) {
-                localVariables[row][col][ident] = i;
-              }
-
-              return previousData;
-            },
-          });
+        // first col
+        for (let row = block.start.row; row < block.end.row + 1; row++) {
+          if (!localVariables[row]) {
+            localVariables[row] = { [col]: { [ident]: 0 } };
+          } else if (!localVariables[row]?.[col]) {
+            localVariables[row]![col] = { [ident]: 0 };
+          } else if (!localVariables[row]?.[col]?.[ident]) {
+            localVariables[row]![col]![ident] = 0;
+          }
         }
+
+        // the rest of the cols
+        sheet.cloneMapCol({
+          col,
+          rowStart: block.start.row,
+          rowEnd: block.end.row + 1,
+          count: repeatAmount - 1, // exclude the first col
+          map: ({ relativeCol, relativeRow, previousData }) => {
+            const num = relativeCol + 1;
+            const row = block.start.row + relativeRow;
+            const col = block.start.col + num;
+
+            if (!localVariables[row]) {
+              localVariables[row] = { [col]: { [ident]: num } };
+            } else if (!localVariables[row][col]) {
+              localVariables[row][col] = { [ident]: num };
+            } else if (!localVariables[row][col][ident]) {
+              localVariables[row][col][ident] = num;
+            }
+
+            return previousData;
+          },
+        });
       }
     }
 
