@@ -3,6 +3,16 @@ import { extractHoistsAndBlocks } from "./extractor";
 import { parseExpressionCell, type ExpressionCell } from "./parser";
 import { Sheet } from "../sheet";
 
+function sheetAdapter(
+  sheet: Sheet<ExpressionCell>,
+): Parameters<typeof extractHoistsAndBlocks> {
+  return [
+    sheet.getBounds(),
+    (col, row) => sheet.getCell(col, row),
+    (col, row, data) => sheet.setCell(col, row, data),
+  ];
+}
+
 describe("extractHoistsAndBlocks", () => {
   it("should collect a variable hoist", () => {
     const sheet = new Sheet<ExpressionCell>([
@@ -15,7 +25,7 @@ describe("extractHoistsAndBlocks", () => {
       ],
     ]);
 
-    const collected = extractHoistsAndBlocks(sheet);
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
     expect(collected).toEqual({
       variableHoists: [
@@ -52,7 +62,7 @@ describe("extractHoistsAndBlocks", () => {
       ],
     ]);
 
-    const collected = extractHoistsAndBlocks(sheet);
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
     expect(collected).toEqual({
       variableHoists: [],
@@ -94,7 +104,7 @@ describe("extractHoistsAndBlocks", () => {
       ],
     ]);
 
-    const collected = extractHoistsAndBlocks(sheet);
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
     expect(collected).toEqual({
       variableHoists: [],
@@ -138,12 +148,14 @@ describe("extractHoistsAndBlocks", () => {
   it("should error when repeatRow is not closed", () => {
     expect(() =>
       extractHoistsAndBlocks(
-        new Sheet<ExpressionCell>([
-          [
-            parseExpressionCell("[#repeatRow [hello] ident]"),
-            parseExpressionCell("i should be repeating by now"),
-          ],
-        ]),
+        ...sheetAdapter(
+          new Sheet<ExpressionCell>([
+            [
+              parseExpressionCell("[#repeatRow [hello] ident]"),
+              parseExpressionCell("i should be repeating by now"),
+            ],
+          ]),
+        ),
       ),
     ).toThrowError(
       "block with identifier `repeatRow` at col 0, row 0 is not closed",
@@ -153,21 +165,23 @@ describe("extractHoistsAndBlocks", () => {
   it("should error when repeatRow is not closed 2", () => {
     expect(() =>
       extractHoistsAndBlocks(
-        new Sheet<ExpressionCell>([
-          [parseExpressionCell("hmm")],
-          [
-            parseExpressionCell("hello world"),
-            parseExpressionCell("i should be repeating by now"),
-            parseExpressionCell("[#repeatRow [hello] ident]"),
-            parseExpressionCell("what"),
-          ],
-          [
-            parseExpressionCell("hello world"),
-            parseExpressionCell("testt"),
-            parseExpressionCell("i should be repeating by now"),
-            parseExpressionCell("what"),
-          ],
-        ]),
+        ...sheetAdapter(
+          new Sheet<ExpressionCell>([
+            [parseExpressionCell("hmm")],
+            [
+              parseExpressionCell("hello world"),
+              parseExpressionCell("i should be repeating by now"),
+              parseExpressionCell("[#repeatRow [hello] ident]"),
+              parseExpressionCell("what"),
+            ],
+            [
+              parseExpressionCell("hello world"),
+              parseExpressionCell("testt"),
+              parseExpressionCell("i should be repeating by now"),
+              parseExpressionCell("what"),
+            ],
+          ]),
+        ),
       ),
     ).toThrowError(
       "block with identifier `repeatRow` at col 2, row 1 is not closed",
@@ -196,7 +210,7 @@ describe("extractHoistsAndBlocks", () => {
       ],
     ]);
 
-    const collected = extractHoistsAndBlocks(sheet);
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
     expect(collected).toEqual({
       variableHoists: [],
@@ -257,7 +271,7 @@ describe("extractHoistsAndBlocks", () => {
       ],
     ]);
 
-    const collected = extractHoistsAndBlocks(sheet);
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
     expect(collected).toEqual({
       variableHoists: [],
@@ -330,20 +344,22 @@ describe("extractHoistsAndBlocks", () => {
   it("should error when repeatCol is not closed", () => {
     expect(() =>
       extractHoistsAndBlocks(
-        new Sheet<ExpressionCell>([
-          [
-            parseExpressionCell("hmm"),
-            parseExpressionCell("hello world"),
-            parseExpressionCell("[#repeatCol [hello] ident]"),
-            parseExpressionCell("what"),
-          ],
-          [
-            parseExpressionCell("hello world"),
-            parseExpressionCell("testt"),
-            parseExpressionCell("i should be repeating by now"),
-            parseExpressionCell("what"),
-          ],
-        ]),
+        ...sheetAdapter(
+          new Sheet<ExpressionCell>([
+            [
+              parseExpressionCell("hmm"),
+              parseExpressionCell("hello world"),
+              parseExpressionCell("[#repeatCol [hello] ident]"),
+              parseExpressionCell("what"),
+            ],
+            [
+              parseExpressionCell("hello world"),
+              parseExpressionCell("testt"),
+              parseExpressionCell("i should be repeating by now"),
+              parseExpressionCell("what"),
+            ],
+          ]),
+        ),
       ),
     ).toThrowError(
       "block with identifier `repeatCol` at col 2, row 0 is not closed",
@@ -353,22 +369,24 @@ describe("extractHoistsAndBlocks", () => {
   it("should error when repeatCol is not closed 2", () => {
     expect(() =>
       extractHoistsAndBlocks(
-        new Sheet<ExpressionCell>([
-          [],
-          [
-            parseExpressionCell("hmm"),
-            parseExpressionCell("hello world"),
-            parseExpressionCell("what"),
-            parseExpressionCell("[#repeatCol [hello] ident]"),
-          ],
-          [
-            parseExpressionCell("hello world"),
-            parseExpressionCell("testt"),
-            parseExpressionCell("i should be repeating by now"),
-          ],
-          [],
-          [],
-        ]),
+        ...sheetAdapter(
+          new Sheet<ExpressionCell>([
+            [],
+            [
+              parseExpressionCell("hmm"),
+              parseExpressionCell("hello world"),
+              parseExpressionCell("what"),
+              parseExpressionCell("[#repeatCol [hello] ident]"),
+            ],
+            [
+              parseExpressionCell("hello world"),
+              parseExpressionCell("testt"),
+              parseExpressionCell("i should be repeating by now"),
+            ],
+            [],
+            [],
+          ]),
+        ),
       ),
     ).toThrowError(
       "block with identifier `repeatCol` at col 3, row 1 is not closed",
@@ -397,7 +415,7 @@ describe("extractHoistsAndBlocks", () => {
       ],
     ]);
 
-    const collected = extractHoistsAndBlocks(sheet);
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
     expect(sheet.getWholeRow({ row: 0 })).toEqual([
       [],
