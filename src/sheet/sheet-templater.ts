@@ -116,9 +116,7 @@ export function createTemplaterFunction<T extends z.ZodTuple, R>(
 export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
   private sheet: Sheet<SheetT>;
 
-  // @ts-expect-error will be used later
   private rowInfo: Record<number, RowInfo> = {};
-  // @ts-expect-error will be used later
   private colInfo: Record<number, ColInfo> = {};
 
   private functions: Record<string, TemplaterFunction<any>> = {
@@ -260,7 +258,32 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     const issues: Issue[] = [];
     let localVariables: Indexable2DArray<Record<string, any>> = {};
 
-    for (const block of blocks) {
+    function setLocalVariables(
+      col: number,
+      row: number,
+      variables: Record<string, any>,
+    ) {
+      if (!localVariables[row]) {
+        localVariables[row] = { [col]: variables };
+      } else if (!localVariables[row][col]) {
+        localVariables[row][col] = variables;
+      } else {
+        localVariables[row][col] = deepmerge(
+          localVariables[row][col],
+          variables,
+        );
+      }
+    }
+
+    function getLocalVariables(col: number, row: number): Record<string, any> {
+      if (!localVariables[row]) return {};
+      if (!localVariables[row][col]) return {};
+      return localVariables[row][col];
+    }
+
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i]!;
+
       // expand inner blocks first
       const result = this.expandBlocks(
         sheet,
@@ -298,35 +321,24 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
         // first row
         for (let col = block.start.col; col < block.end.col + 1; col++) {
-          if (!localVariables[row]) {
-            localVariables[row] = { [col]: { [ident]: 0 } };
-          } else if (!localVariables[row][col]) {
-            localVariables[row][col] = { [ident]: 0 };
-          } else if (!localVariables[row][col]?.[ident]) {
-            localVariables[row][col]![ident] = 0;
-          }
+          setLocalVariables(col, row, { [ident]: 0 });
         }
 
         // the rest of the rows
-        sheet.cloneMapRow({
+        this.duplicateAndShiftRows({
+          sheet,
           row,
           colStart: block.start.col,
           colEnd: block.end.col + 1,
           count: repeatAmount - 1, // exclude the first row
-          map: ({ relativeCol, relativeRow, previousData }) => {
-            const num = relativeRow + 1;
-            const row = block.start.row + num;
-            const col = block.start.col + relativeCol;
-
-            if (!localVariables[row]) {
-              localVariables[row] = { [col]: { [ident]: num } };
-            } else if (!localVariables[row][col]) {
-              localVariables[row][col] = { [ident]: num };
-            } else if (!localVariables[row][col][ident]) {
-              localVariables[row][col][ident] = num;
-            }
-
-            return previousData;
+          otherBlocks: blocks.slice(i),
+          setIndexVariable: (curCol, curRow, index) => {
+            // set this cell's variables to be the same as the first row with
+            // the new index
+            setLocalVariables(curCol, curRow, {
+              ...getLocalVariables(curCol, row),
+              [ident]: index,
+            });
           },
         });
       } else if (block.identifier === "repeatCol") {
@@ -335,41 +347,150 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
         // first col
         for (let row = block.start.row; row < block.end.row + 1; row++) {
-          if (!localVariables[row]) {
-            localVariables[row] = { [col]: { [ident]: 0 } };
-          } else if (!localVariables[row]?.[col]) {
-            localVariables[row]![col] = { [ident]: 0 };
-          } else if (!localVariables[row]?.[col]?.[ident]) {
-            localVariables[row]![col]![ident] = 0;
-          }
+          setLocalVariables(col, row, { [ident]: 0 });
         }
 
         // the rest of the cols
-        sheet.cloneMapCol({
+        this.duplicateAndShiftCols({
+          sheet,
           col,
           rowStart: block.start.row,
           rowEnd: block.end.row + 1,
           count: repeatAmount - 1, // exclude the first col
-          map: ({ relativeCol, relativeRow, previousData }) => {
-            const num = relativeCol + 1;
-            const row = block.start.row + relativeRow;
-            const col = block.start.col + num;
-
-            if (!localVariables[row]) {
-              localVariables[row] = { [col]: { [ident]: num } };
-            } else if (!localVariables[row][col]) {
-              localVariables[row][col] = { [ident]: num };
-            } else if (!localVariables[row][col][ident]) {
-              localVariables[row][col][ident] = num;
-            }
-
-            return previousData;
+          otherBlocks: blocks.slice(i),
+          setIndexVariable: (curCol, curRow, index) => {
+            setLocalVariables(curCol, curRow, {
+              ...getLocalVariables(col, curRow),
+              [ident]: index,
+            });
           },
         });
       }
     }
 
     return success(localVariables, issues);
+  }
+
+  // this function will also shift other blocks and colInfos
+  private duplicateAndShiftCols<T>({
+    sheet,
+    count,
+    rowStart,
+    rowEnd,
+    col,
+    otherBlocks,
+    setIndexVariable,
+  }: {
+    sheet: Sheet<T>;
+    count: number;
+    rowStart: number;
+    rowEnd: number;
+    col: number;
+    otherBlocks: Block[];
+    setIndexVariable: (col: number, row: number, index: number) => void;
+  }) {
+    // do the cloneMapCol operation
+    sheet.cloneMapCol({
+      col,
+      rowStart,
+      rowEnd,
+      count,
+      map: ({ relativeCol, relativeRow, previousData }) => {
+        const num = relativeCol + 1;
+        const curRow = rowStart + relativeRow;
+        const curCol = col + num;
+
+        setIndexVariable(curCol, curRow, num);
+
+        return previousData;
+      },
+    });
+
+    // then shift the other blocks and colInfos
+    function shiftBlocks(blocks: Block[]) {
+      for (const block of blocks) {
+        shiftBlocks(block.innerBlocks);
+        if (block.start.col >= col) block.start.col += count;
+        if (block.end.col >= col) block.end.col += count;
+      }
+    }
+
+    shiftBlocks(otherBlocks);
+
+    for (const [key, val] of Object.entries(this.colInfo)) {
+      const keyNum = parseInt(key);
+      // shift infos that are over the current row, but duplicate the ones that
+      // is on the same row
+      if (keyNum === col) {
+        for (let i = 0; i < count; i++) {
+          this.colInfo[keyNum + count] = val;
+        }
+      } else if (keyNum > col) {
+        this.colInfo[keyNum + count] = val;
+        delete this.colInfo[keyNum];
+      }
+    }
+  }
+
+  // this function will also shift other blocks and rowInfos
+  private duplicateAndShiftRows<T>({
+    sheet,
+    count,
+    colStart,
+    colEnd,
+    row,
+    otherBlocks,
+    setIndexVariable,
+  }: {
+    sheet: Sheet<T>;
+    count: number;
+    colStart: number;
+    colEnd: number;
+    row: number;
+    otherBlocks: Block[];
+    setIndexVariable: (col: number, row: number, index: number) => void;
+  }) {
+    // do the cloneMapRow operation
+    sheet.cloneMapRow({
+      row,
+      colStart,
+      colEnd,
+      count,
+      map: ({ relativeCol, relativeRow, previousData }) => {
+        const num = relativeRow + 1;
+        const curRow = row + num;
+        const curCol = colStart + relativeCol;
+
+        setIndexVariable(curCol, curRow, num);
+
+        return previousData;
+      },
+    });
+
+    // then shift the other blocks and colInfos
+    function shiftBlocks(blocks: Block[]) {
+      for (const block of blocks) {
+        shiftBlocks(block.innerBlocks);
+        if (block.start.row >= row) block.start.row += count;
+        if (block.end.row >= row) block.end.row += count;
+      }
+    }
+
+    shiftBlocks(otherBlocks);
+
+    for (const [key, val] of Object.entries(this.rowInfo)) {
+      const keyNum = parseInt(key);
+      // shift infos that are over the current row, but duplicate the ones that
+      // is on the same row
+      if (keyNum === row) {
+        for (let i = 0; i < count; i++) {
+          this.rowInfo[keyNum + count] = val;
+        }
+      } else if (keyNum > row) {
+        this.rowInfo[keyNum + count] = val;
+        delete this.rowInfo[keyNum];
+      }
+    }
   }
 
   private evaluateExpressionCell(
