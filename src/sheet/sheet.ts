@@ -181,9 +181,7 @@ export class Sheet<T> {
     // move the other rows below
     this.moveBlock({ rowStart: row + 1, colStart: 0 }, { row: row + 2 });
 
-    // set the new data from the back so that `this.setCell` won't continously
-    // pushing new items to the array
-    for (let col = theRow.length - 1; col >= realColStart; col--) {
+    for (let col = realColStart; col < realColStart + theRow.length; col++) {
       this.setCell(
         col,
         row + 1,
@@ -218,7 +216,7 @@ export class Sheet<T> {
     // move the other cols to the right
     this.moveBlock({ colStart: col + 1, rowStart: 0 }, { col: col + 2 });
 
-    for (let row = theCol.length - 1; row >= realRowStart; row--) {
+    for (let row = realRowStart; row < realRowStart + theCol.length; row++) {
       this.setCell(
         col + 1,
         row,
