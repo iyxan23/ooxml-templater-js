@@ -120,7 +120,13 @@ export function extractHoistsAndBlocks(
           blocks,
           endBlocks,
           jumpTo,
-        } = parseCell(cell, col, row);
+        } = parseCell(
+          cell,
+          col,
+          row,
+          (block) => block.identifier === "repeatRow",
+        );
+
         setCell(col, row, result);
         innerBlocks.push(...blocks);
 
@@ -183,7 +189,12 @@ export function extractHoistsAndBlocks(
           blocks,
           endBlocks,
           jumpTo,
-        } = parseCell(cell, col, row);
+        } = parseCell(
+          cell,
+          col,
+          row,
+          (block) => block.identifier === "repeatCol",
+        );
         setCell(col, row, result);
         innerBlocks.push(...blocks);
 
@@ -231,6 +242,9 @@ export function extractHoistsAndBlocks(
     parsedExpression: ExpressionCell,
     col: number,
     row: number,
+    removeEndBlock?: (
+      endBlock: Extract<Expression, { type: "blockEnd" }>,
+    ) => boolean,
   ): {
     cell: ExpressionCell;
     blocks: Block[];
@@ -272,7 +286,13 @@ export function extractHoistsAndBlocks(
         blocks.push({ ...block, start: { ...block.start, startsAt: index } });
         parsedABlock = true;
       } else if (item.type === "blockEnd") {
-        endBlocks.push({ identifier: item.identifier, index });
+        const removeIt = removeEndBlock?.(item) ?? false;
+
+        if (removeIt) endBlocks.push({ identifier: item.identifier, index });
+        else {
+          resultingContent.push(item);
+          continue;
+        }
       } else {
         resultingContent.push(item);
         continue;
@@ -308,7 +328,7 @@ export function extractHoistsAndBlocks(
         cell: result,
         blocks: newBlocks,
         jumpTo,
-      } = parseCell(cell, col, row);
+      } = parseCell(cell, col, row, () => false);
       setCell(col, row, result);
       if (jumpTo) {
         // jumpTo is here to prevent us from reading the same cells twice
