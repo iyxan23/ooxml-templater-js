@@ -333,7 +333,7 @@ export function extractHoistsAndBlocks(
       if (jumpTo) {
         // jumpTo is here to prevent us from reading the same cells twice
         col = jumpTo.col;
-        row = jumpTo.col;
+        row = jumpTo.row;
       }
 
       blocks.push(...newBlocks);
