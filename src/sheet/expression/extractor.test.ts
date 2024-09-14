@@ -479,4 +479,72 @@ describe("extractHoistsAndBlocks", () => {
       ],
     });
   });
+
+  it("should be able to label overlapping repeatRow and repeatCol blocks", () => {
+    const sheet = new Sheet<ExpressionCell>([
+      [
+        parseExpressionCell("a"),
+        parseExpressionCell("b"),
+        parseExpressionCell("[#repeatCol [:stuff length] col]"),
+      ],
+      [
+        parseExpressionCell("[#repeatRow [:stuff length] row]"),
+        parseExpressionCell("repeating row"),
+        parseExpressionCell(
+          "intersection [:row] [:col] [/#repeatRow][/#repeatCol]",
+        ),
+      ],
+    ]);
+
+    const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
+
+    console.log(JSON.stringify(collected, null, 2));
+    expect(collected).toEqual({
+      variableHoists: [],
+      blocks: [
+        {
+          identifier: "repeatCol",
+          innerBlocks: [],
+          arg: {
+            type: "variableAccess",
+            identifier: "stuff",
+            args: ["length"],
+          },
+          indexVariableIdentifier: "col",
+          direction: "col",
+          start: {
+            col: 2,
+            row: 0,
+            startsAt: 0,
+          },
+          end: {
+            col: 2,
+            row: 1,
+            endsAt: 6,
+          },
+        },
+        {
+          identifier: "repeatRow",
+          innerBlocks: [],
+          arg: {
+            type: "variableAccess",
+            identifier: "stuff",
+            args: ['length']
+          },
+          indexVariableIdentifier: "row",
+          direction: 'row',
+          start: {
+            col: 0,
+            row: 1,
+            startsAt: 0,
+          },
+          end: {
+            col: 2,
+            row: 1,
+            endsAt: 5,
+          }
+        }
+      ],
+    });
+  });
 });
