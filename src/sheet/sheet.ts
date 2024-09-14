@@ -111,8 +111,7 @@ export class Sheet<T> {
     rowStart?: number;
     rowEnd?: number;
   }): (T | null)[] {
-    if (this.sheet[0] === undefined) return [];
-    if (this.sheet[0][col] === undefined) return [];
+    if (this.sheet.length === 0) return [];
 
     return this.sheet.slice(rowStart, rowEnd).map((row) => row[col] ?? null);
   }

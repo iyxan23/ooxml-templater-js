@@ -414,7 +414,7 @@ describe("sheet tests", () => {
 
     const sheet = new Sheet<number>(data);
 
-    expect(sheet.getWholeCol({ col: 5 })).toEqual([]);
+    expect(sheet.getWholeCol({ col: 5 }).filter((i) => i !== null)).toEqual([]);
   });
 
   it("inserts mapped data below a row, taking relativeCol", () => {
