@@ -498,7 +498,6 @@ describe("extractHoistsAndBlocks", () => {
 
     const collected = extractHoistsAndBlocks(...sheetAdapter(sheet));
 
-    console.log(JSON.stringify(collected, null, 2));
     expect(collected).toEqual({
       variableHoists: [],
       blocks: [
