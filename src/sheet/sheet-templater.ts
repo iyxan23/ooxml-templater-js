@@ -18,6 +18,8 @@ export interface TemplatableCell {
   cloneWithTextContent(content: string): ThisType<this>;
 }
 
+type Indexable2DArray<T> = Record<number, Record<number, T>>;
+
 export function createTemplaterNoArgsFunction<R>(
   call: () => R,
 ): TemplaterFunction<R> {
@@ -254,12 +256,9 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       name: string,
     ) => TemplaterFunction<any>["call"] | undefined,
     lookupVariable: (name: string) => any | undefined,
-  ): Result<Record<number, Record<number, Record<string, any>>>> {
+  ): Result<Indexable2DArray<Record<string, any>>> {
     const issues: Issue[] = [];
-    let localVariables: Record<
-      number,
-      Record<number, Record<string, any>>
-    > = {};
+    let localVariables: Indexable2DArray<Record<string, any>> = {};
 
     for (const block of blocks) {
       // expand inner blocks first
