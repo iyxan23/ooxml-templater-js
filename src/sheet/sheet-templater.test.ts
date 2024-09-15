@@ -49,7 +49,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("hello"), cell("world")],
       [cell("hello 2"), cell("world 2")],
     ]);
@@ -69,7 +69,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("hello"), cell("before world after")],
       [cell("hello 2"), cell("world 2")],
     ]);
@@ -94,7 +94,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("hello"), cell("world")],
       [cell("hello 2 please call me what"), cell("world 2")],
       [cell("sup"), cell("'ts going on?")],
@@ -139,7 +139,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("iyxan"), cell("software engineer")],
       [cell("length of name: 5"), cell("")],
       [
@@ -212,7 +212,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([[cell("465")]]);
+    expect(result.result.sheet.getSheet()).toEqual([[cell("465")]]);
   });
 
   it("can hoist variables and use them", () => {
@@ -241,7 +241,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("iyxan"), cell("hello, iyxan")],
       [cell("iyxan version two :)"), cell("hello, iyxan version two :)")],
       [cell(""), null],
@@ -301,7 +301,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("No."), cell("Full Name"), cell("Age"), cell("GPA")],
       [cell("1."), cell("John"), cell("57"), cell("21")],
       [cell("2."), cell("Mark"), cell("93"), cell("100")],
@@ -365,7 +365,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("1."), cell("2."), cell("3."), cell("4."), cell("5.")],
       [cell("John"), cell("Mark"), cell("Elon"), cell("Gates"), cell("Andrew")],
       [cell("57"), cell("93"), cell("102"), cell("83"), cell("39")],
@@ -504,7 +504,7 @@ describe("SheetTemplater", () => {
     }
 
     expect(result.issues).toHaveLength(0);
-    expect(result.result.getSheet()).toEqual([
+    expect(result.result.sheet.getSheet()).toEqual([
       [cell("")],
       [
         cell("No"),

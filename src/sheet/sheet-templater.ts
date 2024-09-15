@@ -152,7 +152,11 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
   }
 
-  interpret(data: any): Result<Sheet<SheetT>> {
+  interpret(data: any): Result<{
+    sheet: Sheet<SheetT>;
+    rowInfo?: Record<number, RowInfo>;
+    colInfo?: Record<number, ColInfo>;
+  }> {
     const issues = [];
     const parsedExpressions = this.parseExpressions(this.sheet);
 
@@ -198,12 +202,16 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       globalVariables[expr.identifier] = result.result;
     }
 
+    const colInfo = this.colInfo ? Object.assign({}, this.colInfo) : undefined;
+    const rowInfo = this.rowInfo ? Object.assign({}, this.rowInfo) : undefined;
+
     // stage 3: block expansion
     const expandBlocksResult = this.expandBlocks(
       parsedExpressions,
       blocks,
       (fName) => this.functions[fName]?.call,
       (vName) => globalVariables[vName] ?? data[vName],
+      { colInfo, rowInfo },
     );
 
     if (expandBlocksResult.status === "failed") return expandBlocksResult;
@@ -242,7 +250,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     return {
       sym: resultSymbol,
       status: "success",
-      result: resultSheet,
+      result: { sheet: resultSheet, colInfo, rowInfo },
       issues,
     };
   }
@@ -254,6 +262,13 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       name: string,
     ) => TemplaterFunction<any>["call"] | undefined,
     lookupVariable: (name: string) => any | undefined,
+    {
+      colInfo,
+      rowInfo,
+    }: {
+      colInfo?: Record<number, ColInfo>;
+      rowInfo?: Record<number, RowInfo>;
+    },
   ): Result<Indexable2DArray<Record<string, any>>> {
     const issues: Issue[] = [];
     let localVariables: Indexable2DArray<Record<string, any>> = {};
@@ -290,6 +305,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
         block.innerBlocks,
         lookupFunction,
         lookupVariable,
+        { colInfo, rowInfo },
       );
 
       if (result.status === "failed") return result;
@@ -340,6 +356,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
               [ident]: index,
             });
           },
+          rowInfo
         });
       } else if (block.identifier === "repeatCol") {
         const ident = block.indexVariableIdentifier;
@@ -364,6 +381,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
               [ident]: index,
             });
           },
+          colInfo
         });
       }
     }
@@ -380,6 +398,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     col,
     otherBlocks,
     setIndexVariable,
+    colInfo,
   }: {
     sheet: Sheet<T>;
     count: number;
@@ -388,6 +407,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     col: number;
     otherBlocks: Block[];
     setIndexVariable: (col: number, row: number, index: number) => void;
+    colInfo?: Record<number, ColInfo>;
   }) {
     // do the cloneMapCol operation
     sheet.cloneMapCol({
@@ -417,17 +437,19 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
     shiftBlocks(otherBlocks);
 
-    for (const [key, val] of Object.entries(this.colInfo)) {
+    if (!colInfo) return;
+
+    for (const [key, val] of Object.entries(colInfo)) {
       const keyNum = parseInt(key);
       // shift infos that are over the current row, but duplicate the ones that
       // is on the same row
       if (keyNum === col) {
         for (let i = 0; i < count; i++) {
-          this.colInfo[keyNum + count] = val;
+          colInfo[keyNum + count] = val;
         }
       } else if (keyNum > col) {
-        this.colInfo[keyNum + count] = val;
-        delete this.colInfo[keyNum];
+        colInfo[keyNum + count] = val;
+        delete colInfo[keyNum];
       }
     }
   }
@@ -441,6 +463,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     row,
     otherBlocks,
     setIndexVariable,
+    rowInfo,
   }: {
     sheet: Sheet<T>;
     count: number;
@@ -449,6 +472,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     row: number;
     otherBlocks: Block[];
     setIndexVariable: (col: number, row: number, index: number) => void;
+    rowInfo?: Record<number, RowInfo>;
   }) {
     // do the cloneMapRow operation
     sheet.cloneMapRow({
@@ -478,17 +502,19 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
     shiftBlocks(otherBlocks);
 
-    for (const [key, val] of Object.entries(this.rowInfo)) {
+    if (!rowInfo) return;
+
+    for (const [key, val] of Object.entries(rowInfo)) {
       const keyNum = parseInt(key);
       // shift infos that are over the current row, but duplicate the ones that
       // is on the same row
       if (keyNum === row) {
         for (let i = 0; i < count; i++) {
-          this.rowInfo[keyNum + count] = val;
+          rowInfo[keyNum + count] = val;
         }
       } else if (keyNum > row) {
-        this.rowInfo[keyNum + count] = val;
-        delete this.rowInfo[keyNum];
+        rowInfo[keyNum + count] = val;
+        delete rowInfo[keyNum];
       }
     }
   }
