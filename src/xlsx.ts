@@ -221,6 +221,21 @@ class XlsxTemplater {
     await startVisiting(xlsxData, {
       before: {},
       after: {
+        dimension: [
+          () => {
+            const bounds = sheetData.getBounds();
+            const dimension = createAddressNumber(
+              bounds.colBound,
+              bounds.rowBound,
+            );
+
+            return {
+              newObj: {
+                "@_ref": `A1:${dimension}`,
+              },
+            };
+          },
+        ],
         col: [
           () => {
             return {
