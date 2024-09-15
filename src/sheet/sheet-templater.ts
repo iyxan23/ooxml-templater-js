@@ -18,7 +18,7 @@ export interface TemplatableCell {
   cloneWithTextContent(content: string): ThisType<this>;
 }
 
-type Indexable2DArray<T> = Record<number, Record<number, T>>;
+export type Indexable2DArray<T> = Record<number, Record<number, T>>;
 
 export function createTemplaterNoArgsFunction<R>(
   call: () => R,
