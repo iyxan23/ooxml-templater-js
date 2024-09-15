@@ -64,23 +64,24 @@ export async function xlsxFillTemplate(
 
 class XlsxCell implements TemplatableCell {
   cell: any;
-  text: string;
+  text: string | null;
 
   constructor(cell: any) {
-    // make sure it has the `v` inside of the cell
-    const cellV = cell["v"];
 
-    if (cellV === undefined)
-      throw new Error("Invalid cell, does not contain 'v'");
+    let cellV = cell["v"];
+    if (cellV === undefined) cellV = null;
 
     this.cell = cell;
-    this.text = String(cellV);
+    this.text = cellV ? String(cellV) : cellV;
 
     delete this.cell["v"];
   }
 
   buildCell(reference: `${string}${number}`): any {
     this.cell["@_r"] = reference;
+
+    if (this.text === null) return this.cell;
+
     this.cell["v"] = this.text;
 
     if (isNumeric(this.text)) {
@@ -93,17 +94,21 @@ class XlsxCell implements TemplatableCell {
   }
 
   getTextContent(): string {
-    return this.text;
+    return this.text ?? "";
   }
 
   editTextContent(content: string): XlsxCell {
+    if (this.text === null && content === "") {
+      return this;
+    }
+
     this.text = content;
     return this;
   }
 
   cloneWithTextContent(content: string): XlsxCell {
-    const clone: XlsxCell = Object.assign({}, this);
-    clone.text = content;
+    const clone: XlsxCell = new XlsxCell(Object.assign({}, this.cell));
+    clone.text = content === "" ? null : content;
     return clone;
   }
 }
@@ -173,18 +178,18 @@ class XlsxTemplater {
     // "inject" is a bit misleading, we're essentially injecting the cells that
     // have been templated into the original sheet, without changing anything
     // else other than the fields that do contain the cols, rows and cells.
-    const injectedSheet = this.inject(
+    this.inject(
       templatedSheet.sheet,
       sheetFilled,
       templatedSheet.rowInfo ?? {},
       templatedSheet.colInfo ?? {},
     );
 
-    console.log("injected");
-    console.log(JSON.stringify(injectedSheet, null, 2));
+    console.log("sheetFilled");
+    console.log(JSON.stringify(sheetFilled, null, 2));
 
     const builder = new XMLBuilder(options);
-    const result: string = builder.build(injectedSheet);
+    const result: string = builder.build(sheetFilled);
 
     return result;
   }
@@ -213,7 +218,7 @@ class XlsxTemplater {
       rows[r] = { ...rowInfo[r], c: row.length === 1 ? row[0] : row };
     }
 
-    const visited = await startVisiting(xlsxData, {
+    await startVisiting(xlsxData, {
       before: {},
       after: {
         col: [
@@ -229,7 +234,9 @@ class XlsxTemplater {
           () => {
             return {
               newObj: {
-                row: rows,
+                row: Object.keys(rows)
+                  .toSorted((a, b) => parseInt(a) - parseInt(b))
+                  .map((i) => rows[parseInt(i)]),
               },
             };
           },
@@ -237,7 +244,7 @@ class XlsxTemplater {
       },
     });
 
-    return visited;
+    return xlsxData;
   }
 
   async extract(parsedSheet: any): Promise<{
