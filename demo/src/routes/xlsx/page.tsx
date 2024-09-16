@@ -9,10 +9,13 @@ export function Component() {
   return (
     <div className="w-full min-h-screen flex flex-col items-center">
       <main className="container p-6">
-        <section className="grid grid-cols-2 gap-6">
+        <section className="grid grid-cols-3 gap-6">
           <article className="p-4 rounded-md border border-foreground/10 flex flex-col gap-2 items-center">
             <Label>Input file</Label>
           </article>
+          <div className="flex flex-col items-center justify-center">
+            <h1 className="text-xl">xlsx templater</h1>
+          </div>
           <article className="p-4 rounded-md border border-foreground/10 flex flex-col gap-2 items-center">
             <Label>Output file</Label>
           </article>
