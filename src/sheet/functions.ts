@@ -7,10 +7,12 @@ import { success } from "./expression/result";
 
 // == array
 
-// .rest() is not possible yet
-// const array = createTemplaterFunction(z.tuple([]).rest(z.any()), (...rest) =>
-//   success([...rest]),
-// );
+// usage:
+//
+//  [array "hello world" "another item" "and so on"]
+const array = createTemplaterFunction(z.tuple([]).rest(z.any()), (...rest) =>
+  success([...rest]),
+);
 const arrayEmpty = createTemplaterNoArgsFunction(() => []);
 const arrayAppend = createTemplaterFunction(
   z.tuple([z.any().array(), z.any()]),
@@ -196,6 +198,7 @@ const ifUndefined = createTemplaterFunction(
 );
 
 export const builtinFunctions = {
+  array,
   arrayEmpty,
   arrayAppend,
   flatten,
