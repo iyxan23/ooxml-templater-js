@@ -42,7 +42,7 @@ describe("SheetTemplater", () => {
     ]);
 
     const templater = new SheetTemplater(sheet, {});
-    const result = templater.interpret({});
+    const result = templater.interpret({}, {});
 
     if (result.status === "failed") {
       throw result.error;
@@ -62,7 +62,7 @@ describe("SheetTemplater", () => {
     ]);
 
     const templater = new SheetTemplater(sheet, {});
-    const result = templater.interpret({ hello: "world" });
+    const result = templater.interpret({ hello: "world" }, {});
 
     if (result.status === "failed") {
       throw result.error;
@@ -87,7 +87,7 @@ describe("SheetTemplater", () => {
         callMe: createTemplaterNoArgsFunction(() => "please call me"),
       },
     });
-    const result = templater.interpret({});
+    const result = templater.interpret({}, {});
 
     if (result.status === "failed") {
       throw result.error;
@@ -122,17 +122,20 @@ describe("SheetTemplater", () => {
         ),
       },
     });
-    const result = templater.interpret({
-      person: {
-        name: "iyxan",
-        occupation: "software engineer",
-        age: 100,
+    const result = templater.interpret(
+      {
+        person: {
+          name: "iyxan",
+          occupation: "software engineer",
+          age: 100,
+        },
+        me: {
+          name: "naxyi",
+          age: 56,
+        },
       },
-      me: {
-        name: "naxyi",
-        age: 56,
-      },
-    });
+      {},
+    );
 
     if (result.status === "failed") {
       throw result.error;
@@ -199,13 +202,16 @@ describe("SheetTemplater", () => {
         ),
       },
     });
-    const result = templater.interpret({
-      twoDArray: [
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-        [21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-      ],
-    });
+    const result = templater.interpret(
+      {
+        twoDArray: [
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+          [21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+        ],
+      },
+      {},
+    );
 
     if (result.status === "failed") {
       throw result.error;
@@ -234,7 +240,7 @@ describe("SheetTemplater", () => {
       },
     });
 
-    const result = templater.interpret({ personOne: "iyxan" });
+    const result = templater.interpret({ personOne: "iyxan" }, {});
 
     if (result.status === "failed") {
       throw result.error;
@@ -271,30 +277,33 @@ describe("SheetTemplater", () => {
       },
     });
 
-    const result = templater.interpret({
-      students: [
-        {
-          fullName: "John",
-          age: 57,
-          gpa: 21,
-        },
-        {
-          fullName: "Mark",
-          age: 93,
-          gpa: 100,
-        },
-        {
-          fullName: "Elon",
-          age: 102,
-          gpa: 83,
-        },
-        {
-          fullName: "Gates",
-          age: 83,
-          gpa: 73,
-        },
-      ],
-    });
+    const result = templater.interpret(
+      {
+        students: [
+          {
+            fullName: "John",
+            age: 57,
+            gpa: 21,
+          },
+          {
+            fullName: "Mark",
+            age: 93,
+            gpa: 100,
+          },
+          {
+            fullName: "Elon",
+            age: 102,
+            gpa: 83,
+          },
+          {
+            fullName: "Gates",
+            age: 83,
+            gpa: 73,
+          },
+        ],
+      },
+      {},
+    );
 
     if (result.status === "failed") {
       throw result.error;
@@ -330,35 +339,38 @@ describe("SheetTemplater", () => {
       },
     });
 
-    const result = templater.interpret({
-      students: [
-        {
-          fullName: "John",
-          age: 57,
-          gpa: 21,
-        },
-        {
-          fullName: "Mark",
-          age: 93,
-          gpa: 100,
-        },
-        {
-          fullName: "Elon",
-          age: 102,
-          gpa: 83,
-        },
-        {
-          fullName: "Gates",
-          age: 83,
-          gpa: 73,
-        },
-        {
-          fullName: "Andrew",
-          age: 39,
-          gpa: 64,
-        },
-      ],
-    });
+    const result = templater.interpret(
+      {
+        students: [
+          {
+            fullName: "John",
+            age: 57,
+            gpa: 21,
+          },
+          {
+            fullName: "Mark",
+            age: 93,
+            gpa: 100,
+          },
+          {
+            fullName: "Elon",
+            age: 102,
+            gpa: 83,
+          },
+          {
+            fullName: "Gates",
+            age: 83,
+            gpa: 73,
+          },
+          {
+            fullName: "Andrew",
+            age: 39,
+            gpa: 64,
+          },
+        ],
+      },
+      {},
+    );
 
     if (result.status === "failed") {
       throw result.error;
@@ -444,60 +456,63 @@ describe("SheetTemplater", () => {
       },
     });
 
-    const result = templater.interpret({
-      students: [
-        {
-          fullName: "John",
-          class: "5A",
-          grades: {
-            math: 89,
-            english: 90,
-            programming: 110,
-            science: 93,
+    const result = templater.interpret(
+      {
+        students: [
+          {
+            fullName: "John",
+            class: "5A",
+            grades: {
+              math: 89,
+              english: 90,
+              programming: 110,
+              science: 93,
+            },
           },
-        },
-        {
-          fullName: "Mark",
-          class: "5C",
-          grades: {
-            math: 89,
-            english: 90,
-            programming: 110,
-            science: 93,
+          {
+            fullName: "Mark",
+            class: "5C",
+            grades: {
+              math: 89,
+              english: 90,
+              programming: 110,
+              science: 93,
+            },
           },
-        },
-        {
-          fullName: "Elon",
-          class: "5B",
-          grades: {
-            math: 74,
-            spanish: 83,
-            social: 94,
-            science: 99,
+          {
+            fullName: "Elon",
+            class: "5B",
+            grades: {
+              math: 74,
+              spanish: 83,
+              social: 94,
+              science: 99,
+            },
           },
-        },
-        {
-          fullName: "Gates",
-          class: "4B",
-          grades: {
-            math: 74,
-            german: 90,
-            programming: 70,
-            sport: 89,
+          {
+            fullName: "Gates",
+            class: "4B",
+            grades: {
+              math: 74,
+              german: 90,
+              programming: 70,
+              sport: 89,
+            },
           },
-        },
-        {
-          fullName: "Andrew",
-          class: "4A",
-          grades: {
-            sport: 64,
-            english: 90,
-            german: 84,
-            social: 100,
+          {
+            fullName: "Andrew",
+            class: "4A",
+            grades: {
+              sport: 64,
+              english: 90,
+              german: 84,
+              social: 100,
+            },
           },
-        },
-      ],
-    });
+        ],
+      },
+      {},
+    );
 
     if (result.status === "failed") {
       throw result.error;

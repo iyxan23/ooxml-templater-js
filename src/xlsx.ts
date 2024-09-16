@@ -163,12 +163,57 @@ class XlsxTemplater {
     const extractedData = await this.extract(sheetFilled);
 
     // pass the sheet into SheetTemplater for it to do the actual templating
-    const templater = new SheetTemplater(extractedData.sheet, {
-      rowInfo: extractedData.rowInfo,
-      colInfo: { ...extractedData.colInfo },
+    const templater = new SheetTemplater(extractedData.sheet, {});
+
+    const templateResult = templater.interpret(data, {
+      onShift: (shift) => {
+        if (shift.direction === "row") {
+          if (!rowInfo) return;
+
+          for (const [key, val] of Object.entries(rowInfo)) {
+            const keyNum = parseInt(key);
+            // shift infos that are over the current row, but duplicate the ones that
+            // is on the same row
+            if (keyNum === shift.row) {
+              for (let i = 0; i < shift.amount; i++) {
+                rowInfo[keyNum + shift.amount] = val;
+              }
+            } else if (keyNum > shift.row) {
+              rowInfo[keyNum + shift.amount] = val;
+              delete rowInfo[keyNum];
+            }
+          }
+        } else if (shift.direction === "col") {
+          if (!colInfo) return;
+
+          for (const [key, val] of Object.entries(colInfo)) {
+            const keyNum = parseInt(key);
+            // shift infos that are over the current col, but duplicate the ones that
+            // is on the same col
+            if (keyNum === shift.col) {
+              for (let i = 0; i < shift.amount; i++) {
+                colInfo[keyNum + shift.amount] = val;
+              }
+            } else if (keyNum > shift.col) {
+              colInfo[keyNum + shift.amount] = val;
+              delete colInfo[keyNum];
+            }
+          }
+        }
+
+        // after shifting the colInfo / rowInfo, we then change the mergeInfos
+        for (const { start, end } of mergeInfo) {
+          if (shift.direction === "col") {
+            if (start.col >= shift.col) start.col += shift.amount;
+            if (end.col >= shift.col) end.col += shift.amount;
+          } else if (shift.direction === "row") {
+            if (start.row >= shift.row) start.row += shift.amount;
+            if (end.row >= shift.row) end.row += shift.amount;
+          }
+        }
+      },
     });
 
-    const templateResult = templater.interpret(data);
     if (templateResult.status === "failed") {
       throw new Error(templateResult.error.message);
     }
@@ -178,12 +223,7 @@ class XlsxTemplater {
     // "inject" is a bit misleading, we're essentially injecting the cells that
     // have been templated into the original sheet, without changing anything
     // else other than the fields that do contain the cols, rows and cells.
-    this.inject(
-      templatedSheet.sheet,
-      sheetFilled,
-      templatedSheet.rowInfo ?? {},
-      templatedSheet.colInfo ?? {},
-    );
+    this.inject(templatedSheet.sheet, sheetFilled, rowInfo, colInfo, mergeInfo);
 
     console.log("sheetFilled");
     console.log(JSON.stringify(sheetFilled, null, 2));
@@ -199,6 +239,10 @@ class XlsxTemplater {
     xlsxData: any,
     rowInfo: Record<number, any>,
     colInfo: Record<number, any>,
+    mergeInfo: {
+      start: { col: number; row: number };
+      end: { col: number; row: number };
+    }[],
   ): Promise<any> {
     const rows: Record<number, { c: any[] | any } & any> = {};
 
@@ -252,6 +296,24 @@ class XlsxTemplater {
                 row: Object.keys(rows)
                   .toSorted((a, b) => parseInt(a) - parseInt(b))
                   .map((i) => rows[parseInt(i)]),
+              },
+            };
+          },
+        ],
+        mergeCells: [
+          () => {
+            const mergeCell = [];
+
+            for (const info of mergeInfo) {
+              const start = createAddressNumber(info.start.col, info.start.row);
+              const end = createAddressNumber(info.end.col, info.end.row);
+              mergeCell.push(`${start}:${end}`);
+            }
+
+            return {
+              newObj: {
+                mergeCell: mergeCell.map((m) => ({ "@_ref": m })),
+                "@_count": mergeCell.length,
               },
             };
           },

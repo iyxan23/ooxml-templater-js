@@ -113,11 +113,42 @@ export function createTemplaterFunction<T extends z.ZodTuple, R>(
   };
 }
 
-export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
-  private sheet: Sheet<SheetT>;
+type SheetShiftListener = (
+  shift:
+    | {
+        direction: "row";
+        row: number;
+        amount: number;
+        colStart: number;
+        colEnd: number;
+      }
+    | {
+        direction: "col";
+        col: number;
+        amount: number;
+        rowStart: number;
+        rowEnd: number;
+      },
+) => void;
 
-  private rowInfo: Record<number, RowInfo> = {};
-  private colInfo: Record<number, ColInfo> = {};
+class SheetShiftEmitter {
+  private listeners: SheetShiftListener[] = [];
+
+  onShift(listener: SheetShiftListener) {
+    this.listeners.push(listener);
+  }
+
+  emitShift(shift: Parameters<SheetShiftListener>[0]) {
+    this.listeners.forEach((l) => l(shift));
+  }
+
+  clear() {
+    this.listeners = [];
+  }
+}
+
+export class SheetTemplater<SheetT extends TemplatableCell> {
+  private sheet: Sheet<SheetT>;
 
   private functions: Record<string, TemplaterFunction<any>> = {
     helloWorld: createTemplaterNoArgsFunction(() => "hello world"),
@@ -129,20 +160,13 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
   constructor(
     sheet: Sheet<SheetT>,
     {
-      rowInfo,
-      colInfo,
       functions,
     }: {
-      rowInfo?: Record<number, RowInfo>;
-      colInfo?: Record<number, ColInfo>;
       functions?: Record<string, TemplaterFunction<any>>;
     },
   ) {
     this.sheet = sheet;
     this.sheet.optimizeSheet();
-
-    if (rowInfo) this.rowInfo = rowInfo;
-    if (colInfo) this.colInfo = colInfo;
 
     if (functions) {
       // merge this.functions with functions
@@ -152,10 +176,11 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     }
   }
 
-  interpret(data: any): Result<{
+  interpret(
+    data: any,
+    { onShift }: { onShift?: SheetShiftListener },
+  ): Result<{
     sheet: Sheet<SheetT>;
-    rowInfo?: Record<number, RowInfo>;
-    colInfo?: Record<number, ColInfo>;
   }> {
     const issues = [];
     const parsedExpressions = this.parseExpressions(this.sheet);
@@ -178,7 +203,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       if (sheetCell === null) {
         throw new Error(
           `cannot find the cell referenced by variable hoist on` +
-          ` col ${col} row ${row}`,
+            ` col ${col} row ${row}`,
         );
       }
 
@@ -202,8 +227,9 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       globalVariables[expr.identifier] = result.result;
     }
 
-    const colInfo = this.colInfo ? Object.assign({}, this.colInfo) : undefined;
-    const rowInfo = this.rowInfo ? Object.assign({}, this.rowInfo) : undefined;
+    // setup the sheet shift emitter
+    const sheetShiftEmitter = new SheetShiftEmitter();
+    if (onShift) sheetShiftEmitter.onShift(onShift);
 
     // stage 3: block expansion
     const expandBlocksResult = this.expandBlocks(
@@ -211,7 +237,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       blocks,
       (fName) => this.functions[fName]?.call,
       (vName) => globalVariables[vName] ?? data[vName],
-      { colInfo, rowInfo },
+      sheetShiftEmitter,
     );
 
     if (expandBlocksResult.status === "failed") return expandBlocksResult;
@@ -250,7 +276,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     return {
       sym: resultSymbol,
       status: "success",
-      result: { sheet: resultSheet, colInfo, rowInfo },
+      result: { sheet: resultSheet },
       issues,
     };
   }
@@ -262,13 +288,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
       name: string,
     ) => TemplaterFunction<any>["call"] | undefined,
     lookupVariable: (name: string) => any | undefined,
-    {
-      colInfo,
-      rowInfo,
-    }: {
-      colInfo?: Record<number, ColInfo>;
-      rowInfo?: Record<number, RowInfo>;
-    },
+    sheetShiftEmitter: SheetShiftEmitter,
   ): Result<Indexable2DArray<Record<string, any>>> {
     const issues: Issue[] = [];
     let localVariables: Indexable2DArray<Record<string, any>> = {};
@@ -305,7 +325,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
         block.innerBlocks,
         lookupFunction,
         lookupVariable,
-        { colInfo, rowInfo },
+        sheetShiftEmitter,
       );
 
       if (result.status === "failed") return result;
@@ -356,7 +376,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
               [ident]: index,
             });
           },
-          rowInfo
+          sheetShiftEmitter,
         });
       } else if (block.identifier === "repeatCol") {
         const ident = block.indexVariableIdentifier;
@@ -381,7 +401,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
               [ident]: index,
             });
           },
-          colInfo
+          sheetShiftEmitter,
         });
       }
     }
@@ -389,7 +409,8 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     return success(localVariables, issues);
   }
 
-  // this function will also shift other blocks and colInfos
+  // this function will also shift other blocks and other
+  // listeners of ShiftEventEmitter
   private duplicateAndShiftCols<T>({
     sheet,
     count,
@@ -398,7 +419,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     col,
     otherBlocks,
     setIndexVariable,
-    colInfo,
+    sheetShiftEmitter,
   }: {
     sheet: Sheet<T>;
     count: number;
@@ -407,7 +428,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     col: number;
     otherBlocks: Block[];
     setIndexVariable: (col: number, row: number, index: number) => void;
-    colInfo?: Record<number, ColInfo>;
+    sheetShiftEmitter: SheetShiftEmitter;
   }) {
     // do the cloneMapCol operation
     sheet.cloneMapCol({
@@ -437,24 +458,17 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
     shiftBlocks(otherBlocks);
 
-    if (!colInfo) return;
-
-    for (const [key, val] of Object.entries(colInfo)) {
-      const keyNum = parseInt(key);
-      // shift infos that are over the current row, but duplicate the ones that
-      // is on the same row
-      if (keyNum === col) {
-        for (let i = 0; i < count; i++) {
-          colInfo[keyNum + count] = val;
-        }
-      } else if (keyNum > col) {
-        colInfo[keyNum + count] = val;
-        delete colInfo[keyNum];
-      }
-    }
+    sheetShiftEmitter.emitShift({
+      direction: "col",
+      col,
+      amount: count,
+      rowStart,
+      rowEnd,
+    });
   }
 
-  // this function will also shift other blocks and rowInfos
+  // this function will also shift other blocks and other
+  // listeners of ShiftEventEmitter
   private duplicateAndShiftRows<T>({
     sheet,
     count,
@@ -463,7 +477,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     row,
     otherBlocks,
     setIndexVariable,
-    rowInfo,
+    sheetShiftEmitter,
   }: {
     sheet: Sheet<T>;
     count: number;
@@ -472,7 +486,7 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
     row: number;
     otherBlocks: Block[];
     setIndexVariable: (col: number, row: number, index: number) => void;
-    rowInfo?: Record<number, RowInfo>;
+    sheetShiftEmitter: SheetShiftEmitter;
   }) {
     // do the cloneMapRow operation
     sheet.cloneMapRow({
@@ -502,21 +516,13 @@ export class SheetTemplater<SheetT extends TemplatableCell, RowInfo, ColInfo> {
 
     shiftBlocks(otherBlocks);
 
-    if (!rowInfo) return;
-
-    for (const [key, val] of Object.entries(rowInfo)) {
-      const keyNum = parseInt(key);
-      // shift infos that are over the current row, but duplicate the ones that
-      // is on the same row
-      if (keyNum === row) {
-        for (let i = 0; i < count; i++) {
-          rowInfo[keyNum + count] = val;
-        }
-      } else if (keyNum > row) {
-        rowInfo[keyNum + count] = val;
-        delete rowInfo[keyNum];
-      }
-    }
+    sheetShiftEmitter.emitShift({
+      direction: "row",
+      row,
+      amount: count,
+      colStart,
+      colEnd,
+    });
   }
 
   private evaluateExpressionCell(
