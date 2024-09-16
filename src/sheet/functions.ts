@@ -95,10 +95,10 @@ const map = createTemplaterFunction(
     const issues = [];
     const callFn = callLambda(fn);
 
-    for (let i = 0; i < arr.length; i++) {
+    for (const item of arr) {
       const result = callFn({
         variables: {
-          [idxName]: i,
+          [idxName]: item,
         },
       });
 
