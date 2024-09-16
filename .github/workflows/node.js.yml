@@ -29,6 +29,12 @@ jobs:
     - run: npm run build
     - run: npm test
 
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3.2.1-node20
+      with:
+        name: build-dist
+        path: './dist'
+
   build-site:
     needs: build
     runs-on: ubuntu-latest
@@ -43,7 +49,12 @@ jobs:
           node-version: 22.x
           cache: 'npm'
 
-      - run: npm ci
+      - name: Download dist of ooxml-templater-js
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: build-dist
+          path: './dist'
+      
       - run: cd demo && npm ci
 
       - name: Build the demo site
@@ -59,6 +70,10 @@ jobs:
     environment:
       name: github-pages
       url: ${{steps.deployment.outputs.page_url}}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     needs: build-site
     steps:
         - name: Deploy to GitHub Pages
