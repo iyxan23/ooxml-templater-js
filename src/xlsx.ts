@@ -162,6 +162,10 @@ class XlsxTemplater {
     // then we turn this sheet into a Sheet object so we can work with it easier
     const extractedData = await this.extract(sheetFilled);
 
+    const rowInfo = extractedData.rowInfo;
+    const colInfo = extractedData.colInfo;
+    const mergeInfo = extractedData.mergeInfo;
+
     // pass the sheet into SheetTemplater for it to do the actual templating
     const templater = new SheetTemplater(extractedData.sheet, {});
 
