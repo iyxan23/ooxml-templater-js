@@ -76,7 +76,7 @@ type MapFunctionsToLambdas<T> = { [K in keyof T]: MapFunctionToLambda<T[K]> };
  *
  * See `success(...)`, and `failure(...)` to easily create `Result<any>` objects.
  */
-export function createTemplaterFunction<T extends z.ZodTuple, R>(
+export function createTemplaterFunction<T extends z.AnyZodTuple, R>(
   schema: T,
   call: (...args: MapFunctionsToLambdas<z.infer<T>>) => Result<R>,
 ): TemplaterFunction<R> {
