@@ -3,13 +3,15 @@ import Question from "./_components/index-question";
 import { Link } from "react-router-dom";
 import { Logo } from "~/components/logo";
 
-export default function IndexPage() {
+export function Component() {
   return (
     <main className="w-full h-full flex flex-col items-center gap-4 pt-[12.5vh] pb-16 relative">
-      <p className="absolute top-16 text-[7vw] opacity-5 select-none">still wip ( ͡° ͜ʖ ͡°)</p>
+      <p className="text-center absolute top-16 text-[10vw] md:text-[7vw] opacity-5 select-none">
+        still wip ( ͡° ͜ʖ ͡°)
+      </p>
       <Logo />
-      <h1 className="font-mono text-3xl">ooxml-templater-js</h1>
-      <p>
+      <h1 className="font-mono text-3xl text-center">ooxml-templater-js</h1>
+      <p className="text-center">
         no-nonsense{" "}
         <Button variant="link" asChild className="px-0">
           <a href="http://officeopenxml.com/">ooxml</a>

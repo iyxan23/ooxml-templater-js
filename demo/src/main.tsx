@@ -4,10 +4,7 @@ import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import RootRoute from "./routes/root";
 import ErrorPage from "./error-page";
-import IndexPage from "./routes";
 import { ThemeProvider } from "./components/theme-provider";
-import XlsxPage from "./routes/xlsx/page";
-import DocxPage from "./routes/docx/page";
 
 const router = createBrowserRouter(
   [
@@ -16,14 +13,14 @@ const router = createBrowserRouter(
       element: <RootRoute />,
       errorElement: <ErrorPage />,
       children: [
-        { index: true, element: <IndexPage /> },
+        { index: true, lazy: async () => import("./routes/index") },
         {
           path: "xlsx",
-          element: <XlsxPage />,
+          lazy: async () => import("./routes/xlsx/page"),
         },
         {
           path: "docx",
-          element: <DocxPage />,
+          lazy: async () => import("./routes/docx/page"),
         },
       ],
     },

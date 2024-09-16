@@ -1,3 +1,3 @@
-export default function DocxPage() {
+export function Component() {
   return <main>docx</main>;
 }
