@@ -8,6 +8,7 @@ import {
 import { startVisiting } from "./visitor-editor";
 import { Sheet } from "./sheet/sheet";
 import { SheetTemplater, TemplatableCell } from "./sheet/sheet-templater";
+import { Issue, TemplaterFunction } from "./sheet/expression/evaluate";
 
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 
@@ -15,6 +16,14 @@ export async function xlsxFillTemplate(
   xlsx: ReadableStream,
   output: WritableStream,
   input: any,
+  opts?: {
+    functions?: Record<string, TemplaterFunction<any>>;
+    onSheetFinished: (
+      status:
+        | { status: "success"; issues: Issue[] }
+        | { status: "failed"; issues: Issue[]; error: Issue },
+    ) => void;
+  },
 ) {
   const zipWriter = new ZipWriter(output);
   const zipReader = new ZipReader(xlsx);
@@ -56,7 +65,13 @@ export async function xlsxFillTemplate(
       input,
     );
 
-    await zipWriter.add(entry.filename, new BlobReader(new Blob([result])));
+    opts?.onSheetFinished?.(
+      result.error
+        ? { status: "failed", issues: result.issues, error: result.cause }
+        : { status: "success", issues: result.issues },
+    );
+
+    await zipWriter.add(entry.filename, new BlobReader(new Blob([result.xml])));
   }
 
   zipWriter.close();
@@ -67,7 +82,6 @@ class XlsxCell implements TemplatableCell {
   text: string | null;
 
   constructor(cell: any) {
-
     let cellV = cell["v"];
     if (cellV === undefined) cellV = null;
 
@@ -116,6 +130,7 @@ class XlsxCell implements TemplatableCell {
 class XlsxTemplater {
   // a list of raw XML, make sure to pass it as-is. tends to be <t> tags
   private sharedStrings: any[] = [];
+  private functions: Record<string, TemplaterFunction<any>> = {};
 
   private parseSharedStrings(sharedStringsXml: string) {
     const options: X2jOptions & XmlBuilderOptions = {
@@ -136,12 +151,25 @@ class XlsxTemplater {
     );
   }
 
-  constructor(sharedStringsXml?: string) {
+  constructor(
+    sharedStringsXml?: string,
+    functions?: Record<string, TemplaterFunction<any>>,
+  ) {
     if (sharedStringsXml) this.parseSharedStrings(sharedStringsXml);
+    if (functions) this.functions = functions;
+
     console.log(this.sharedStrings);
   }
 
-  async template(templateContent: string, data: any): Promise<string> {
+  async template(
+    templateContent: string,
+    data: any,
+  ): Promise<
+    { xml: string; issues: Issue[] } & (
+      | { error: true; cause: Issue }
+      | { error: false }
+    )
+  > {
     const options: X2jOptions & XmlBuilderOptions = {
       ignoreAttributes: false,
       parseTagValue: false,
@@ -167,7 +195,9 @@ class XlsxTemplater {
     const mergeInfo = extractedData.mergeInfo;
 
     // pass the sheet into SheetTemplater for it to do the actual templating
-    const templater = new SheetTemplater(extractedData.sheet, {});
+    const templater = new SheetTemplater(extractedData.sheet, {
+      functions: this.functions,
+    });
 
     const templateResult = templater.interpret(data, {
       onShift: (shift) => {
@@ -214,16 +244,42 @@ class XlsxTemplater {
       },
     });
 
-    if (templateResult.status === "failed") {
-      throw new Error(templateResult.error.message);
+    let templatedSheet;
+    if (templateResult.status === "success") {
+      templatedSheet = templateResult.result.sheet;
+    } else if (templateResult.status === "failed") {
+      templatedSheet = new Sheet([
+        [
+          new XlsxCell({
+            v:
+              `failed to template: ${templateResult.error.message} at ` +
+              `column ${templateResult.error.col}` +
+              ` row ${templateResult.error.row}`,
+          }),
+        ],
+      ]);
+    } else {
+      throw "unreachable";
     }
 
-    const templatedSheet = templateResult.result;
+    // insert issues into the sheet
+    const bounds = templatedSheet.getBounds();
+    let lastRow = bounds.rowBound;
+    for (const issue of templateResult.issues) {
+      templatedSheet.insertMapBelowRow(lastRow, ({ col }) => {
+        if (col > 0) return null;
+
+        return new XlsxCell({
+          v: `[ISSUE] ${issue.message} at column ${issue.col} row ${issue.row}`,
+        });
+      });
+      lastRow++;
+    }
 
     // "inject" is a bit misleading, we're essentially injecting the cells that
     // have been templated into the original sheet, without changing anything
     // else other than the fields that do contain the cols, rows and cells.
-    this.inject(templatedSheet.sheet, sheetFilled, rowInfo, colInfo, mergeInfo);
+    this.inject(templatedSheet, sheetFilled, rowInfo, colInfo, mergeInfo);
 
     console.log("sheetFilled");
     console.log(JSON.stringify(sheetFilled, null, 2));
@@ -231,7 +287,16 @@ class XlsxTemplater {
     const builder = new XMLBuilder(options);
     const result: string = builder.build(sheetFilled);
 
-    return result;
+    const error =
+      templateResult.status === "failed"
+        ? { error: true as const, cause: templateResult.error }
+        : { error: false as const };
+
+    return {
+      xml: result,
+      issues: templateResult.issues,
+      ...error,
+    };
   }
 
   async inject(
