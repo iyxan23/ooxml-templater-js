@@ -190,18 +190,14 @@ class XlsxTemplater {
         } else if (shift.direction === "col") {
           if (!colInfo) return;
 
-          for (const [key, val] of Object.entries(colInfo)) {
-            const keyNum = parseInt(key);
-            // shift infos that are over the current col, but duplicate the ones that
-            // is on the same col
-            if (keyNum === shift.col) {
-              for (let i = 0; i < shift.amount; i++) {
-                colInfo[keyNum + shift.amount] = val;
-              }
-            } else if (keyNum > shift.col) {
-              colInfo[keyNum + shift.amount] = val;
-              delete colInfo[keyNum];
-            }
+          // colInfo is different, rather than using indexes,
+          // it stores min & max in "@_min" and "@_max" respectively.
+          for (const col of colInfo) {
+            const min = col["@_min"];
+            const max = col["@_max"];
+
+            if (min >= shift.col) col["@_min"] += shift.amount;
+            if (max >= shift.col) col["@_max"] += shift.amount;
           }
         }
 
