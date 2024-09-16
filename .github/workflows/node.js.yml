@@ -13,24 +13,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 22
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 22.x
         cache: 'npm'
+
     - run: npm ci
     - run: npm run build
     - run: npm test
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3.2.1-node20
+      uses: actions/upload-artifact@v4
       with:
         name: build-dist
         path: './dist'
@@ -50,7 +46,7 @@ jobs:
           cache: 'npm'
 
       - name: Download dist of ooxml-templater-js
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4
         with:
           name: build-dist
           path: './dist'
