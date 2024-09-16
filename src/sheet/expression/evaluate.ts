@@ -8,9 +8,16 @@ export type Issue = {
   index?: number;
 };
 
-export type TemplaterFunction<R> = {
-  call: (funcName: string, ...args: any[]) => Result<R>;
+export type TemplaterFunctionContext = {
+  functionName: string;
+  col: number;
+  row: number;
+  callTree: string[];
 };
+export type TemplaterFunction<R> = (
+  context: TemplaterFunctionContext,
+  ...args: any[]
+) => Result<R>;
 
 export type LambdaFunction<T> = (
   lookupLocalVariable?: (name: string) => any,
@@ -21,7 +28,7 @@ export function evaluateExpression(
   context: { col: number; row: number; callTree: string[] },
   lookupFunction: (
     funcName: string,
-  ) => TemplaterFunction<any>["call"] | undefined,
+  ) => TemplaterFunction<any> | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<any | undefined> {
   if (
@@ -112,7 +119,10 @@ export function evaluateExpression(
       ]);
     }
 
-    let result = func(item.identifier, ...funcArgs);
+    let result = func(
+      { functionName: item.identifier, ...context },
+      ...funcArgs,
+    );
 
     if (result.status === "failed") {
       return result;

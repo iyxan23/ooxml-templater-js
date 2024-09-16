@@ -250,11 +250,11 @@ describe("expression evaluation", () => {
               return s((vName: string) =>
                 vName === "world" ? "people!" : undefined,
               );
-            }).call
+            })
           : fName === "ret"
             ? createTemplaterFunction(z.tuple([z.string()]), (s) => {
                 return success(`ret ${s}`);
-              }).call
+              })
             : undefined,
       (_vName) => undefined,
     );
@@ -322,7 +322,7 @@ describe("expression evaluation", () => {
       { col: 0, row: 0, callTree: ["root"] },
       (fName) =>
         fName === "getHow"
-          ? createTemplaterNoArgsFunction(() => "how").call
+          ? createTemplaterNoArgsFunction(() => "how")
           : undefined,
       (vName) =>
         vName === "var"
@@ -396,13 +396,13 @@ describe("expression evaluation", () => {
 
               return success(r, issues);
             },
-          ).call,
+          ),
           join: createTemplaterFunction(
             z.tuple([z.array(z.string()), z.string()]),
             (strings, sep) => {
               return success(strings.join(sep));
             },
-          ).call,
+          ),
         })[fName],
       (vName) =>
         vName === "students"

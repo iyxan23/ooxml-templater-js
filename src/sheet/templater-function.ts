@@ -1,13 +1,11 @@
 import { z } from "zod";
 import { LambdaFunction, TemplaterFunction } from "./expression/evaluate";
-import { Result, success } from "./expression/result";
+import { failure, Result, success } from "./expression/result";
 
 export function createTemplaterNoArgsFunction<R>(
   call: () => R,
 ): TemplaterFunction<R> {
-  return {
-    call: () => success(call()),
-  };
+  return () => success(call());
 }
 
 /**
@@ -80,17 +78,20 @@ export function createTemplaterFunction<T extends z.AnyZodTuple, R>(
   schema: T,
   call: (...args: MapFunctionsToLambdas<z.infer<T>>) => Result<R>,
 ): TemplaterFunction<R> {
-  return {
-    call: (funcName, ...args: any) => {
-      const result = schema.safeParse(args);
+  return ({ functionName, ...context }, ...args: any) => {
+    const result = schema.safeParse(args);
 
-      if (!result.success) {
-        throw new Error(
-          `invalid arguments when evaluating function \`${funcName}\`: ${result.error}`,
-        );
-      }
+    if (!result.success) {
+      return failure(
+        {
+          message: `Invalid arguments while calling ${functionName}. trace: ${context.callTree.join(" > ")}`,
+          col: context.col,
+          row: context.row,
+        },
+        [],
+      );
+    }
 
-      return call(...(result.data as MapFunctionsToLambdas<z.infer<T>>));
-    },
+    return call(...(result.data as MapFunctionsToLambdas<z.infer<T>>));
   };
 }

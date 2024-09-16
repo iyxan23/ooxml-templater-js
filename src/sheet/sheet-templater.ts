@@ -105,7 +105,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       const sheetCell = this.sheet.getCell(col, row);
       if (sheetCell === null) {
         throw new Error(
-          `cannot find the cell referenced by variable hoist on` +
+          `fatal: cannot find the cell referenced by variable hoist on` +
             ` col ${col} row ${row}`,
         );
       }
@@ -117,7 +117,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
           row,
           callTree: [`hoisted variable \`${expr.identifier}\``],
         },
-        (funcName) => this.functions[funcName]?.call,
+        (funcName) => this.functions[funcName],
         (variableName) => globalVariables[variableName] ?? data[variableName],
       );
 
@@ -138,7 +138,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
     const expandBlocksResult = this.expandBlocks(
       parsedExpressions,
       blocks,
-      (fName) => this.functions[fName]?.call,
+      (fName) => this.functions[fName],
       (vName) => globalVariables[vName] ?? data[vName],
       sheetShiftEmitter,
     );
@@ -189,7 +189,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
     blocks: Block[],
     lookupFunction: (
       name: string,
-    ) => TemplaterFunction<any>["call"] | undefined,
+    ) => TemplaterFunction<any> | undefined,
     lookupVariable: (name: string) => any | undefined,
     sheetShiftEmitter: SheetShiftEmitter,
   ): Result<Indexable2DArray<Record<string, any>>> {
@@ -451,7 +451,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       const evalResult = evaluateExpression(
         item,
         { ...context, callTree: ["<root>"] },
-        (funcName) => this.functions[funcName]?.call,
+        (funcName) => this.functions[funcName],
         lookupVariable,
       );
 
