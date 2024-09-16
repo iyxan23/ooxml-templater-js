@@ -44,6 +44,8 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+      - run: cd demo && npm ci
+
       - name: Build the demo site
         run: cd demo && npm run build
 
