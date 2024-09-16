@@ -378,8 +378,6 @@ class XlsxTemplater {
                     },
                     {} as Record<string, any>,
                   ),
-                min: col["@_min"],
-                max: col["@_max"],
               });
             }
           },
