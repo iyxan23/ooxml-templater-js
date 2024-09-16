@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  callLambda,
-  createTemplaterFunction,
-  createTemplaterNoArgsFunction,
-} from "../sheet-templater";
+import { callLambda, createTemplaterFunction } from "../templater-function";
+import { createTemplaterNoArgsFunction } from "../templater-function";
 import { evaluateExpression, Issue } from "./evaluate";
 import { Expression } from "./parser";
 import { success } from "./result";

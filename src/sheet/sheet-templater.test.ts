@@ -1,12 +1,11 @@
 import { z } from "zod";
 import { Sheet } from "./sheet";
 import {
-  callLambda,
-  createTemplaterFunction,
-  createTemplaterNoArgsFunction,
   SheetTemplater,
   TemplatableCell,
 } from "./sheet-templater";
+import { callLambda, createTemplaterFunction } from "./templater-function";
+import { createTemplaterNoArgsFunction } from "./templater-function";
 import { success } from "./expression/result";
 
 class SimpleCell implements TemplatableCell {
