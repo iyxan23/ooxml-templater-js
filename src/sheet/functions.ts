@@ -68,9 +68,12 @@ const reduce = createTemplaterFunction(
         },
       });
 
-      if (callResult.status === "failed") return callResult;
-      issues.push(...callResult.issues);
+      if (callResult.status === "failed") {
+        callResult.issues.push(...issues);
+        return callResult;
+      }
 
+      issues.push(...callResult.issues);
       result = callResult.result;
     }
 
@@ -99,7 +102,10 @@ const map = createTemplaterFunction(
         },
       });
 
-      if (result.status === "failed") return result;
+      if (result.status === "failed") {
+        result.issues.push(...issues);
+        return result;
+      }
 
       issues.push(...result.issues);
       resultArr.push(result.result);
@@ -133,7 +139,10 @@ const filter = createTemplaterFunction(
         },
       });
 
-      if (result.status === "failed") return result;
+      if (result.status === "failed") {
+        result.issues.push(...issues);
+        return result;
+      }
 
       issues.push(...result.issues);
       if (result.result) resultArr.push(item);
