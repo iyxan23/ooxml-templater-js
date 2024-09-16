@@ -223,11 +223,11 @@ class XlsxTemplater {
           // colInfo is different, rather than using indexes,
           // it stores min & max in "@_min" and "@_max" respectively.
           for (const col of colInfo) {
-            const min = col["@_min"];
-            const max = col["@_max"];
+            const min = parseInt(col["@_min"]);
+            const max = parseInt(col["@_max"]);
 
-            if (min >= shift.col) col["@_min"] += shift.amount;
-            if (max >= shift.col) col["@_max"] += shift.amount;
+            if (min >= shift.col) col["@_min"] = String(min + shift.amount);
+            if (max >= shift.col) col["@_max"] = String(max + shift.amount);
           }
         }
 
