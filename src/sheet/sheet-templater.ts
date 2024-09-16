@@ -9,6 +9,7 @@ import {
 import { resultSymbol, success } from "./expression/result";
 import { Result } from "./expression/result";
 import deepmerge from "deepmerge";
+import { builtinFunctions } from "./functions";
 
 export interface TemplatableCell {
   getTextContent(): string;
@@ -56,10 +57,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
   private sheet: Sheet<SheetT>;
 
   private functions: Record<string, TemplaterFunction<any>> = {
-    helloWorld: createTemplaterNoArgsFunction(() => "hello world"),
-    testLambda: createTemplaterFunction(z.tuple([z.function()]), (a) =>
-      success(a()),
-    ),
+    ...builtinFunctions,
   };
 
   constructor(
