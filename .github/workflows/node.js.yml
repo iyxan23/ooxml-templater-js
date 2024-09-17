@@ -51,15 +51,15 @@ jobs:
           name: build-dist
           path: './dist'
       
-      - run: cd demo && npm ci
+      - run: cd site && npm ci
 
-      - name: Build the demo site
-        run: cd demo && npm run build
+      - name: Build the site
+        run: cd site && npm run build
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: './demo/dist'
+          path: './site/dist'
 
   deploy:
     runs-on: ubuntu-latest
