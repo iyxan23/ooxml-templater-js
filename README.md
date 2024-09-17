@@ -5,11 +5,10 @@
 No-nonsense minimally invasive docx and xlsx templater written in pure
 typescript, featuring a functional language.
 
-## Installation
+## Getting Started
 
-This library is still in the works, I do not have plans of publishing it into a
-repository yet. In the meantime, you could use this repo as a git submodule
-and then add it as a dependency in your project by path.
+Check this [doc for more info](docs/getting-started.md). You can also try it out
+on the live astro-powered demo [here](https://iyxan23.github.io/ooxml-templater-js/).
 
 ## Wait what?
 
@@ -27,3 +26,30 @@ it might break something I didn't want to break.
 
 In short, it replaces the texts and duplicates existing text (with its style
 data and all).
+
+## wat dis?!
+
+```
+[A] yo we got `report-template.xlsx`, can you fill it out with data:
+ |  { ... big json data ... }
+ +  Thanks!
+    attached: report-template.xlsx
+
+[B] 1000iq mode, does
+ |
+ |    import { xlsxFillTemplate } from "ooxml-templater-xlsx";
+ |    xlsxFillTemplate(file.stream(), output, theData);
+ |
+ +  Here's the result:
+    attached: Q1-report.xlsx
+
+[A] ah, we need a whole year, from Q1 to Q4.
+
+[B] say less
+ |
+ |    quarters.forEach((i) =>
+ |      xlsxFillTemplate(i.stream(), outputStream, quarterData[i])
+ |    );
+ +
+   attached: Q1-report.xlsx, Q2-report.xlsx, Q3-report.xlsx, Q4-report.xlsx
+```
