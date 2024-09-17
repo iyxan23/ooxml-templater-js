@@ -18,7 +18,7 @@ export default function SheetPreviewDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)]">
+      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] grid grid-rows-[auto_1fr]">
         <DialogHeader>
           <DialogTitle>preview sheet</DialogTitle>
           <DialogDescription>

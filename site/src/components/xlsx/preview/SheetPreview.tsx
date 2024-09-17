@@ -32,9 +32,9 @@ export default function SheetPreview({ file = null }: { file: File | null }) {
 
   return (
     <div
-      className="overflow-auto grid w-fit h-fit"
+      className="grid w-fit h-fit"
       style={{
-        gridTemplateColumns: `repeat(${longest}, 1fr)`,
+        gridTemplateColumns: `repeat(${longest}, minmax(12rem, 1fr))`,
       }}
     >
       {rows.map((row, i) => (
