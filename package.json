@@ -54,12 +54,10 @@
     "vitest-mock-extended": "^2.0.0"
   },
   "sideEffects": false,
-  "dependencies": {
-    "@zip.js/zip.js": "^2.7.52",
-    "deepmerge": "^4.3.1",
-    "fast-xml-parser": "^4.5.0"
-  },
   "peerDependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3",
+    "@zip.js/zip.js": "^2",
+    "deepmerge": "^4",
+    "fast-xml-parser": "^4"
   }
 }
