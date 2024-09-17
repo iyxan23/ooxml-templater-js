@@ -26,21 +26,23 @@ const base = import.meta.env.BASE_URL;
   }
 </style>
 
-<script is:inline>
-  const navLinks = document.querySelectorAll("nav a");
+<script>
+  function updateActiveLink() {
+    const navA = document.querySelectorAll<HTMLAnchorElement>("nav a");
 
-  navLinks.forEach((link) => {
-    link.classList.remove("active");
+    for (const a of navA) {
+      a.classList.remove("active");
 
-    // `slice` here to remove the first `/` in pathname
-    const currentPath = window.location.pathname.slice(1);
+      const currentPath = window.location.pathname.slice(
+        import.meta.env.BASE_URL.length,
+      );
 
-    // `link.href` returns a whole url, such as: "https://somedomain.com/posts" and we only need the last part
-    const hrefArray = link.href.split("/");
-    const thisPath = hrefArray[hrefArray.length - 1];
-
-    if (currentPath === thisPath) {
-      link.classList.add("active");
+      if (currentPath === a.dataset["path"]) {
+        a.classList.add("active");
+      }
     }
-  });
+  }
+
+  updateActiveLink();
+  document.addEventListener("astro:after-swap", updateActiveLink);
 </script>
