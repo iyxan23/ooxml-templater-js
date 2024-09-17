@@ -2,6 +2,7 @@ import { DownloadIcon, EyeIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { useXlsxTemplater } from "./useXlsxTemplater";
+import SheetPreviewDialog from "./preview/SheetPreviewDialog";
 
 export default function OutputFile() {
   const output = useXlsxTemplater((state) => state.output);
@@ -11,9 +12,16 @@ export default function OutputFile() {
     <article className="p-4 rounded-md border border-foreground/10 flex flex-col gap-4">
       <div className="flex flex-row justify-between">
         <Label htmlFor="output-file">Output File</Label>
-        <Button size="icon" variant="ghost" className="p-0 h-4 w-4 scale-150">
-          <EyeIcon size=".75em" />
-        </Button>
+        <SheetPreviewDialog disabled={!output} file={output}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="p-0 h-4 w-4 scale-150"
+            disabled={!output}
+          >
+            <EyeIcon size=".75em" />
+          </Button>
+        </SheetPreviewDialog>
       </div>
       <Button
         id="output-file"

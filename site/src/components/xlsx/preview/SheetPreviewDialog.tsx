@@ -11,13 +11,17 @@ import SheetPreview from "./SheetPreview";
 export default function SheetPreviewDialog({
   children,
   file,
+  disabled,
 }: {
   children: React.ReactNode;
-  file: File | null;
+  file: File | Blob | null;
+  disabled?: boolean;
 }) {
   return (
     <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogTrigger asChild disabled={disabled}>
+        {children}
+      </DialogTrigger>
       <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] grid grid-rows-[auto_1fr]">
         <DialogHeader>
           <DialogTitle>preview sheet</DialogTitle>

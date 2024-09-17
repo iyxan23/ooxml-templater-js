@@ -1,7 +1,11 @@
 import XLSX from "xlsx";
 import React from "react";
 
-export default function SheetPreview({ file = null }: { file: File | null }) {
+export default function SheetPreview({
+  file = null,
+}: {
+  file: File | Blob | null;
+}) {
   const [rows, setRows] = React.useState<string[][]>([]);
   const longest = React.useMemo(() => findLongestChildArray(rows), [rows]);
 
@@ -28,7 +32,6 @@ export default function SheetPreview({ file = null }: { file: File | null }) {
 
     reader.readAsArrayBuffer(file);
   }, [file]);
-  console.log(rows);
 
   return (
     <div
