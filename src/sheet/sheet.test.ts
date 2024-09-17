@@ -207,6 +207,22 @@ describe("sheet tests", () => {
     expect(bounds.colBound).toBe(2);
   });
 
+  it("does not error out when a row is empty", () => {
+    const data = [[1, 2, 3]];
+
+    const sheet = new Sheet<number>(data);
+
+    // set data below the 1st row
+    sheet.setCell(0, 2, 4);
+    sheet.setCell(1, 2, 5);
+    sheet.setCell(2, 2, 6);
+
+    // [1] is empty
+
+    expect(sheet.getBounds()).toStrictEqual({ rowBound: 2, colBound: 2 });
+    expect(sheet.getWholeRow({ row: 1 })).toStrictEqual([]);
+  });
+
   it("slices off columns and rows", () => {
     const data = [
       [1, 2, 3],

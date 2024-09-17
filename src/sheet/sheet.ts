@@ -34,7 +34,9 @@ export class Sheet<T> {
     let maxRow = 0;
 
     for (let row = 0; row < this.sheet.length; row++) {
-      const currentRow = this.sheet[row]!;
+      const currentRow = this.sheet[row];
+      if (currentRow === undefined) continue;
+
       let curMaxRow = currentRow.length;
 
       // flag to check if the row is full of nulls
@@ -65,7 +67,10 @@ export class Sheet<T> {
   sliceOffColumns(fromCol: number) {
     if (this.sheet.length > 0) {
       for (let row = 0; row < this.sheet.length; row++) {
-        this.sheet[row] = this.sheet[row]!.slice(0, fromCol + 1);
+        const theRow = this.sheet[row];
+        if (theRow === undefined) continue;
+
+        this.sheet[row] = theRow.slice(0, fromCol + 1);
       }
     }
   }
