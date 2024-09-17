@@ -20,9 +20,14 @@ export default function DataInput() {
         onChange={(e) => setData(e.target.value)}
         rows={15}
       />
-      <Button disabled={isPending || !file} onClick={() => doTemplate()}>
-        Template
-      </Button>
+      <div className="flex flex-row justify-between gap-4 items-end">
+        <p className="text-sm text-muted-foreground">
+          Note: This is all happening on the client! (≧▽≦)
+        </p>
+        <Button disabled={isPending || !file} onClick={() => doTemplate()}>
+          Template
+        </Button>
+      </div>
     </>
   );
 }
