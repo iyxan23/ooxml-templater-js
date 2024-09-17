@@ -3,11 +3,14 @@ import Layout from "../layouts/Layout.astro";
 import ButtonLink from "~/components/ButtonLink.astro";
 import Question from "~/components/Question.astro";
 import Logo from "~/components/Logo.astro";
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <Layout title="ooxml-templater-js | Home">
   <main
     class="w-full h-full flex flex-col items-center gap-4 pt-[12.5vh] pb-16 relative"
+    transition:animate="fade"
   >
     <p
       class="text-center absolute top-16 text-[10vw] md:text-[7vw] opacity-5 select-none"
@@ -43,8 +46,8 @@ import Logo from "~/components/Logo.astro";
     </section>
 
     <section class="mt-8 flex flex-row gap-4">
-      <ButtonLink href="/docx">try docx</ButtonLink>
-      <ButtonLink href="/xlsx">try xlsx</ButtonLink>
+      <ButtonLink href={`${base}docx/`}>try docx</ButtonLink>
+      <ButtonLink href={`${base}xlsx/`}>try xlsx</ButtonLink>
     </section>
   </main>
 </Layout>

@@ -1,8 +1,22 @@
+---
+const base = import.meta.env.BASE_URL;
+---
+
 <nav class="flex flex-row gap-4 sm:gap-6 items-center text-sm font-medium">
-  <a class="transition-opacity hover:opacity-80 opacity-50" href="/">home</a>
-  <a class="transition-opacity hover:opacity-80 opacity-50" href="/docx">docx</a
+  <a
+    class="transition-opacity hover:opacity-80 opacity-50"
+    href={`${base}`}
+    data-path="">home</a
   >
-  <a class="transition-opacity hover:opacity-80 opacity-50" href="/xlsx">xlsx</a
+  <a
+    class="transition-opacity hover:opacity-80 opacity-50"
+    href={`${base}docx/`}
+    data-path="docx/">docx</a
+  >
+  <a
+    class="transition-opacity hover:opacity-80 opacity-50"
+    href={`${base}xlsx/`}
+    data-path="xlsx/">xlsx</a
   >
 </nav>
 
