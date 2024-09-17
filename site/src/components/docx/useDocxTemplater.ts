@@ -1,8 +1,8 @@
-import { xlsxFillTemplate } from "ooxml-templater/xlsx";
+import { docxFillTemplate } from "ooxml-templater/docx";
 import { create } from "zustand";
 import { streamToBlob } from "~/lib/utils";
 
-interface XlsxTemplaterState {
+interface DocxTemplaterState {
   data: string;
   setData: (data: string) => void;
 
@@ -15,7 +15,7 @@ interface XlsxTemplaterState {
   doTemplate: () => Promise<void>;
 }
 
-export const useXlsxTemplater = create<XlsxTemplaterState>()((set, get) => ({
+export const useDocxTemplater = create<DocxTemplaterState>()((set, get) => ({
   data: "",
   setData: (data: string) => set({ data }),
 
@@ -44,7 +44,7 @@ export const useXlsxTemplater = create<XlsxTemplaterState>()((set, get) => ({
     set({ isPending: true });
 
     const transform = new TransformStream();
-    void xlsxFillTemplate(file.stream(), transform.writable, inputData);
+    void docxFillTemplate(file.stream(), transform.writable, inputData);
 
     const blob = await streamToBlob(transform.readable);
 
