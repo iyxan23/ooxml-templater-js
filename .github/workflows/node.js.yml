@@ -51,6 +51,7 @@ jobs:
           name: build-dist
           path: './dist'
       
+      - run: npm ci
       - run: cd site && npm ci
 
       - name: Build the site
