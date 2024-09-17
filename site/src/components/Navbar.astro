@@ -1,0 +1,32 @@
+<nav class="flex flex-row gap-4 sm:gap-6 items-center text-sm font-medium">
+  <a class="transition-opacity hover:opacity-80 opacity-50" href="/">home</a>
+  <a class="transition-opacity hover:opacity-80 opacity-50" href="/docx">docx</a
+  >
+  <a class="transition-opacity hover:opacity-80 opacity-50" href="/xlsx">xlsx</a
+  >
+</nav>
+
+<style>
+  nav > a.active {
+    @apply opacity-100 hover:opacity-100;
+  }
+</style>
+
+<script is:inline>
+  const navLinks = document.querySelectorAll("nav a");
+
+  navLinks.forEach((link) => {
+    link.classList.remove("active");
+
+    // `slice` here to remove the first `/` in pathname
+    const currentPath = window.location.pathname.slice(1);
+
+    // `link.href` returns a whole url, such as: "https://somedomain.com/posts" and we only need the last part
+    const hrefArray = link.href.split("/");
+    const thisPath = hrefArray[hrefArray.length - 1];
+
+    if (currentPath === thisPath) {
+      link.classList.add("active");
+    }
+  });
+</script>

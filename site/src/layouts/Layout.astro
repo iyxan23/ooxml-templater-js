@@ -1,0 +1,76 @@
+---
+import { ModeToggle } from "~/components/ModeToggle";
+import Navbar from "~/components/Navbar.astro";
+import "~/styles/globals.css";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="iyxan23/ooxml-templater-js" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="grid grid-rows-[auto_1fr] w-screen min-h-screen">
+      <div
+        class="w-full flex flex-row justify-center border border-b-foreground/10 bg-background sticky top-0 left-0"
+      >
+        <header
+          class="container py-4 flex flex-row justify-between items-center px-6"
+        >
+          <h1 class="font-semibold">
+            <span class="text-sm font-normal opacity-50 hidden sm:inline">
+              <a href="https://github.com/iyxan23">iyxan23</a> /{" "}
+            </span>
+            <a href="https://github.com/iyxan23/ooxml-templater-js">
+              ooxml-templater-js
+            </a>{" "}
+            <div class="hidden sm:inline"></div>
+          </h1>
+          <div class="flex flex-row gap-4 sm:gap-8 items-center">
+            <Navbar />
+            <div class="h-full w-[1px] bg-foreground/20 hidden sm:block">
+              &nbsp;
+            </div>
+            <ModeToggle client:idle />
+          </div>
+        </header>
+      </div>
+      <slot />
+    </div>
+  </body>
+</html>
+
+<script is:inline>
+  const getThemePreference = () => {
+    if (typeof localStorage !== "undefined" && localStorage.getItem("theme")) {
+      return localStorage.getItem("theme");
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  };
+  const isDark = getThemePreference() === "dark";
+  document.documentElement.classList[isDark ? "add" : "remove"]("dark");
+
+  if (typeof localStorage !== "undefined") {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.classList.contains("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+</script>
