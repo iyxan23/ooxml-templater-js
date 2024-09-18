@@ -1,3 +1,5 @@
+<img src="./.github/ooxml-templater-js.png" />
+
 <h1 align=center><pre>ooxml-templater-js</pre></h1>
 
 [![Node.js CI](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/node.js.yml/badge.svg)](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/node.js.yml)
