@@ -177,6 +177,9 @@ const round = createTemplaterFunction(
       round ? Math.round(num * (round * 10)) / (round * 10) : Math.round(num),
     ),
 );
+const sum = createTemplaterFunction(z.tuple([]).rest(z.number()), (...nums) =>
+  success(nums.reduce((a, b) => a + b, 0)),
+);
 
 // == string
 
@@ -226,6 +229,7 @@ export const builtinFunctions = {
   multiply,
   divide,
   round,
+  sum,
 
   concat,
   join,
