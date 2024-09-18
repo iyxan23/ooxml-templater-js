@@ -1,0 +1,50 @@
+{
+  "students": [
+    {
+      "fullName": "John Andrew",
+      "domain": "CS101",
+      "columns": {
+        "A": 100,
+        "B": 300,
+        "C": 70,
+        "D": 28
+      }
+    },
+    {
+      "fullName": "Emma Watson",
+      "domain": "CS102",
+      "columns": {
+        "A": 95,
+        "B": 280,
+        "E": 60
+      }
+    },
+    {
+      "fullName": "Michael Jordan",
+      "domain": "CS103",
+      "columns": {
+        "A": 90,
+        "C": 75,
+        "F": 40
+      }
+    },
+    {
+      "fullName": "Sophia Lee",
+      "domain": "CS104",
+      "columns": {
+        "B": 310,
+        "D": 30,
+        "G": 50
+      }
+    },
+    {
+      "fullName": "David Smith",
+      "domain": "CS105",
+      "columns": {
+        "C": 80,
+        "E": 65,
+        "G": 55
+      }
+    }
+  ]
+}
