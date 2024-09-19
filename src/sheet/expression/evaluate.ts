@@ -1,5 +1,9 @@
 import { Expression } from "./parser";
-import { Result, success } from "./result";
+import { failure, Result, success } from "./result";
+
+// Rule of thumb when erroring out:
+//  - use `failure()` when it is a user error
+//  - use throw new Error() when it is a fatal error from the author itself
 
 export type Issue = {
   col: number;
@@ -26,11 +30,37 @@ export type LambdaFunction<T> = (
 export function evaluateExpression(
   item: Expression,
   context: { col: number; row: number; callTree: string[] },
-  lookupFunction: (
-    funcName: string,
-  ) => TemplaterFunction<any> | undefined,
+  lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<any | undefined> {
+  const result = evaluateExpressionInternal(
+    item,
+    context,
+    lookupFunction,
+    lookupVariable,
+  );
+
+  if (result.status === "failed") return result;
+
+  const { spread, data } = result.result;
+
+  if (spread)
+    throw new Error(
+      "spread is not supposed to be used in the top-level expression tree",
+    );
+
+  return success(data, result.issues);
+}
+
+type CanBeSpread<T> = { spread: boolean; data: T };
+
+function evaluateExpressionInternal(
+  item: Expression,
+  context: { col: number; row: number; callTree: string[] },
+  lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
+  lookupVariable: (name: string) => any | undefined,
+): Result<CanBeSpread<any | undefined>> {
+  console.log("evaluating expression", item);
   if (
     item.type === "blockStart" ||
     item.type === "blockEnd" ||
@@ -38,10 +68,10 @@ export function evaluateExpression(
   ) {
     console.warn(
       `at col ${context.col} ${context.row} ${item.type} is not supposed` +
-        ` to be in the evaluation stage.`,
+      ` to be in the evaluation stage.`,
     );
 
-    return success(undefined, [
+    return success({ spread: false, data: undefined }, [
       {
         col: context.col,
         row: context.row,
@@ -52,6 +82,24 @@ export function evaluateExpression(
     ]);
   }
 
+  if (item.type === "spread") {
+    const exprResult = evaluateExpressionInternal(
+      item.expr,
+      context,
+      lookupFunction,
+      lookupVariable,
+    );
+
+    if (exprResult.status === "failed") return exprResult;
+
+    const { spread, data } = exprResult.result;
+
+    if (spread)
+      throw new Error("spread is not supposed to be used more than once");
+
+    return success({ spread: true, data }, []);
+  }
+
   if (item.type === "lambda") {
     // please really do note that lambda expressions return a simple function
     // that takes a record of local variables to be applied within this scope
@@ -59,9 +107,10 @@ export function evaluateExpression(
     // the return type is of type Issue<any>, which could be a "failed" (known
     // from `.status`) execution, due to the nature of interpreted languages.
     // there could also be issues that can be seen from `.status`.
-    return success<LambdaFunction<any>>(
-      (lookupLocalVariable?: (name: string) => any) =>
-        evaluateExpression(
+    return success<CanBeSpread<LambdaFunction<any>>>({
+      spread: false,
+      data: (lookupLocalVariable?: (name: string) => any) => {
+        const result = evaluateExpressionInternal(
           item.expression,
           {
             ...context,
@@ -72,20 +121,41 @@ export function evaluateExpression(
           /* lookupVariable: */
           (varName) =>
             lookupLocalVariable?.(varName) ?? lookupVariable(varName),
-        ),
-    );
+        );
+
+        if (result.status === "failed") return result;
+
+        const { spread, data } = result.result;
+
+        if (spread) {
+          return failure(
+            {
+              col: context.col,
+              row: context.row,
+              message: "spread is not supposed to be used in a lambda",
+            },
+            result.issues,
+          );
+        }
+
+        return success(data, result.issues);
+      },
+    });
   }
 
   if (item.type === "call") {
     const funcArgs = [];
     const issues = [];
+    let idx = -1; // -1 because i want idx++ at the start of the for loop
+
     for (const arg of item.args) {
+      idx++;
       if (typeof arg === "string") {
         funcArgs.push(arg);
         continue;
       }
 
-      const result = evaluateExpression(
+      const result = evaluateExpressionInternal(
         arg,
         {
           ...context,
@@ -103,13 +173,35 @@ export function evaluateExpression(
         return result;
       }
 
-      funcArgs.push(result.result);
+      const { data: argResult, spread } = result.result;
+
+      // before pushing, we check whether the result is "spread"
+      if (!spread) {
+        funcArgs.push(argResult);
+      }
+
+      if (argResult == null) {
+        funcArgs.push(argResult);
+      } else if (Symbol.iterator in Object(argResult)) {
+        // check whether it is iterable
+        funcArgs.push(...argResult);
+      } else {
+        // return an error!
+        return failure(
+          {
+            col: context.col,
+            row: context.row,
+            message: `when calling function \`${item.identifier}\`: [${item.identifier} ${funcArgs.map(() => "--").join(" ")} ???], argument ??? is being spread "..." but it's not iterable`,
+          },
+          [...issues],
+        );
+      }
     }
 
     const func = lookupFunction(item.identifier);
 
     if (!func) {
-      return success(undefined, [
+      return success({ spread: false, data: undefined }, [
         ...issues,
         {
           col: context.col,
@@ -128,14 +220,17 @@ export function evaluateExpression(
       return result;
     }
 
-    return success(result.result, [...result.issues, ...issues]);
+    return success({ spread: false, data: result.result }, [
+      ...result.issues,
+      ...issues,
+    ]);
   }
 
   // item is a variableAccess
 
   const variable = lookupVariable(item.identifier);
   if (variable === undefined) {
-    return success(undefined, [
+    return success({ spread: false, data: undefined }, [
       {
         col: context.col,
         row: context.row,
@@ -155,7 +250,7 @@ export function evaluateExpression(
       continue;
     }
 
-    const result = evaluateExpression(
+    const result = evaluateExpressionInternal(
       arg,
       {
         ...context,
@@ -173,19 +268,42 @@ export function evaluateExpression(
     }
 
     issues.push(...result.issues);
-    indexes.push(result.result);
+
+    const { spread, data: argResult } = result.result;
+
+    // before pushing, we check whether the result is "spread"
+    if (!spread) {
+      indexes.push(result.result);
+    }
+
+    // check whether it is iterable
+    if (argResult == null) {
+      indexes.push(argResult);
+    } else if (Symbol.iterator in Object(argResult)) {
+      indexes.push(...argResult);
+    } else {
+      // return an error!
+      return failure(
+        {
+          col: context.col,
+          row: context.row,
+          message: `when indexing the variable \`${item.identifier}\`: [:${item.identifier} ${indexes.join(" ")} ???], the ??? is being spread "..." but it's not iterable`,
+        },
+        [...issues],
+      );
+    }
   }
 
   // try to access the variable given the indexes
   let ret = variable;
   for (const index of indexes) {
     if (ret === undefined || ret === null) {
-      return success(undefined, [
+      return success({ spread: false, data: undefined }, [
         ...issues,
         {
           col: context.col,
           row: context.row,
-          message: `value indexed on \`${item.identifier}\`.${indexes.join(".")} is not defined.`,
+          message: `variable indexed [:${item.identifier} ${indexes.join(" ")} ???], the ??? is not defined.`,
         },
       ]);
     }
@@ -193,5 +311,5 @@ export function evaluateExpression(
     ret = ret[index];
   }
 
-  return success(ret);
+  return success({ spread: false, data: ret });
 }
