@@ -254,8 +254,11 @@ class XlsxTemplater {
           new XlsxCell({
             v:
               `failed to template: ${templateResult.error.message} at ` +
-              `column ${templateResult.error.col}` +
-              ` row ${templateResult.error.row}`,
+              `column ${templateResult.error.col + 1}` +
+              ` row ${templateResult.error.row + 1} or ${createAddressNumber(
+                templateResult.error.col,
+                templateResult.error.row,
+              )}`,
           }),
         ],
       ]);
