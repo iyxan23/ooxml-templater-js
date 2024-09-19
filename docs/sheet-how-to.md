@@ -310,7 +310,7 @@ map function (a built-in function btw):
 Here's how the function above looks like in javascript:
 
 ```javascript
-numbers.map((number) => multiply(number, 10))
+numbers.map((number) => multiply(number, 10));
 ```
 
 The map function will be evaluated to be an array of numbers. Since it's not a
@@ -360,3 +360,57 @@ lambda. Even if the user doesn't need to pass any arguments about what the
 local variable name will be. But it is good practice to make the local variable
 be named as how the user wished, as to not clash with any existing global
 variables / input object keys.
+
+## Blocks
+
+Blocks are an expression that starts with `[#...`, followed by the name of the
+block, then ended with an expression that starts with `[/#...`. Using blocks is
+a method of grouping certain cells to do certain things with them.
+
+Currently, there are only `repeatRow` and `repeatCol` blocks that clones a row
+or a column multiple times according to a `count` argument. They are currently
+uncustomizable, but I have an intention to make it customizable in the future.
+
+Here is an example of a `repeatRow` block:
+
+| 1                    | 2        | 3               |
+| -------------------- | -------- | --------------- |
+| `[#repeatRow 5 idx]` | `[:idx]` | `[/#repeatRow]` |
+
+The sheet above will be expanded to be:
+
+| 1   | 2        | 3   | Row Variables |
+| --- | -------- | --- | ------------- |
+|     | `[:idx]` |     | idx = 0       |
+|     | `[:idx]` |     | idx = 1       |
+|     | `[:idx]` |     | idx = 2       |
+|     | `[:idx]` |     | idx = 3       |
+
+And finally evaluated to be:
+
+| 1   | 2   | 3   |
+| --- | --- | --- |
+|     | `0` |     |
+|     | `1` |     |
+|     | `2` |     |
+|     | `3` |     |
+
+Essentially, a `repeatRow` block will clone a row and repeat it according to
+the evaluation result you placed on the first parameter. it will also define a
+local variable on each row that where you can know the index of that row.
+
+```
+[#repeatRow [sum [:myArray]] row]
+            ---------------- ---
+      how much to repeat     local variable name
+```
+
+The `repeatCol` block also does the same thing, the obvious difference is that
+it repeats columns rather than rows.
+
+Here is an example of a `repeatCol` block:
+
+| 1                    |
+| -------------------- |
+| `[#repeatCol 5 idx]` |
+| `[:idx]`             |
