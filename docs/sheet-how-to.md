@@ -371,6 +371,8 @@ Currently, there are only `repeatRow` and `repeatCol` blocks that clones a row
 or a column multiple times according to a `count` argument. They are currently
 uncustomizable, but I have an intention to make it customizable in the future.
 
+### `repeatRow`
+
 Here is an example of a `repeatRow` block:
 
 | 1                    | 2        | 3               |
@@ -408,9 +410,40 @@ local variable on each row that where you can know the index of that row.
 The `repeatCol` block also does the same thing, the obvious difference is that
 it repeats columns rather than rows.
 
+### `repeatCol`
+
 Here is an example of a `repeatCol` block:
 
 | 1                    |
 | -------------------- |
 | `[#repeatCol 5 idx]` |
 | `[:idx]`             |
+| `[/#repeatCol]`      |
+
+The sheet above will be expanded to be:
+
+| 1        | 2        | 3        | 4        | 5        |
+| -------- | -------- | -------- | -------- | -------- |
+|          |          |          |          |          |
+| `[:idx]` | `[:idx]` | `[:idx]` | `[:idx]` | `[:idx]` |
+|          |          |          |          |          |
+
+> With each columns storing a local variable `idx` depending on the column
+
+And finally evaluated to be:
+
+| 1   | 2   | 3   | 4   | 5   |
+| --- | --- | --- | --- | --- |
+|     |     |     |     |     |
+| `0` | `1` | `2` | `3` | `4` |
+|     |     |     |     |     |
+
+### Mixing multiple blocks
+
+For more complex use cases, it is also possible to combine these two blocks
+together in an intersection, or be nested in a union.
+
+## Trying it out
+
+Learning by practice is way better. I've prepared some samples you can check out
+on the [samples/](/samples) directory and try them out in the [live demo](https://iyxan23.github.io/ooxml-templater-js/).
