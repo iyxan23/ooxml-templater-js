@@ -82,6 +82,9 @@ export function createTemplaterFunction<T extends z.AnyZodTuple, R>(
     const result = schema.safeParse(args);
 
     if (!result.success) {
+      // todo: parse zod errors to get detailed errors
+      //       and perhaps be able to return the arguments of this function
+      //       call to make it easier to debug
       return failure(
         {
           message: `Invalid arguments while calling ${functionName}. trace: ${context.callTree.join(" > ")}`,
