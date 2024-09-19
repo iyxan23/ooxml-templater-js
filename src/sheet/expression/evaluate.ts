@@ -60,7 +60,6 @@ function evaluateExpressionInternal(
   lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<CanBeSpread<any | undefined>> {
-  console.log("evaluating expression", item);
   if (
     item.type === "blockStart" ||
     item.type === "blockEnd" ||
@@ -178,6 +177,7 @@ function evaluateExpressionInternal(
       // before pushing, we check whether the result is "spread"
       if (!spread) {
         funcArgs.push(argResult);
+        continue;
       }
 
       if (argResult == null) {
@@ -273,7 +273,8 @@ function evaluateExpressionInternal(
 
     // before pushing, we check whether the result is "spread"
     if (!spread) {
-      indexes.push(result.result);
+      indexes.push(argResult);
+      continue;
     }
 
     // check whether it is iterable
