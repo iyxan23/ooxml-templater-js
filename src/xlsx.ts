@@ -146,9 +146,10 @@ class XlsxTemplater {
     const parser = new XMLParser(options);
     const parsed = parser.parse(sharedStringsXml);
 
-    this.sharedStrings = parsed["sst"]["si"].map(
-      (i: { t: { "#text": string } }) => i.t["#text"],
-    );
+    const sharedStrings = parsed["sst"]?.["si"];
+
+    this.sharedStrings =
+      sharedStrings?.map((i: { t: { "#text": string } }) => i.t["#text"]) ?? [];
   }
 
   constructor(
