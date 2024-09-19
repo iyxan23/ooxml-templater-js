@@ -48,6 +48,38 @@ export function parseExpressionCell(s: string): ExpressionCell {
         args.push(parseExpression());
         index++;
         continue;
+      } else if (char === ".") {
+        // if there are 3 dots, and there is an expression right after it,
+        // that expression's evaluation result will be spread like how the ...
+        // operator work
+
+        index++;
+        let numberOfDots = 1;
+        let dotCheckChar;
+        while ((dotCheckChar = s[index]) === ".") {
+          numberOfDots++;
+          index++;
+        }
+
+        // skip if there are no exactly 3 dots
+        if (numberOfDots !== 3) {
+          currentBuf += ".".repeat(numberOfDots);
+          continue;
+        }
+
+        // skip if there is no `[` right after it
+        if (s[index] !== "[") {
+          currentBuf += ".".repeat(numberOfDots);
+          continue;
+        }
+
+        args.push({
+          type: "spread",
+          expr: parseExpression(),
+        });
+
+        index++;
+        continue;
       } else if (char === '"') {
         let str = "";
 
@@ -167,30 +199,35 @@ export type ExpressionCell = (string | Expression)[];
 
 export type Expression =
   | {
-      type: "blockStart";
-      identifier: string;
-      args: (string | Expression)[];
-    }
+    type: "blockStart";
+    identifier: string;
+    args: (string | Expression)[];
+  }
   | {
-      type: "blockEnd";
-      identifier: string;
-    }
+    type: "blockEnd";
+    identifier: string;
+  }
   | {
-      type: "call";
-      identifier: string;
-      args: (string | Expression)[];
-    }
+    // evaluation of this expression will be spread
+    type: "spread";
+    expr: Expression;
+  }
   | {
-      type: "variableAccess";
-      identifier: string;
-      args: (string | Expression)[];
-    }
+    type: "call";
+    identifier: string;
+    args: (string | Expression)[];
+  }
   | {
-      type: "variableHoist";
-      identifier: string;
-      expression: Expression;
-    }
+    type: "variableAccess";
+    identifier: string;
+    args: (string | Expression)[];
+  }
   | {
-      type: "lambda";
-      expression: Expression;
-    };
+    type: "variableHoist";
+    identifier: string;
+    expression: Expression;
+  }
+  | {
+    type: "lambda";
+    expression: Expression;
+  };

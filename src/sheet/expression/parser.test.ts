@@ -101,6 +101,80 @@ describe("parseExpressionCell", () => {
     expect(parseExpressionCell(input)).toEqual(expected);
   });
 
+  it("parses a simple call expression wrapped with spread", () => {
+    const input = "hello [:var ...[func]] world";
+    const expected: ExpressionCell = [
+      "hello ",
+      {
+        type: "variableAccess",
+        identifier: "var",
+        args: [
+          {
+            type: "spread",
+            expr: {
+              type: "call",
+              identifier: "func",
+              args: [],
+            },
+          },
+        ],
+      },
+      " world",
+    ];
+
+    expect(parseExpressionCell(input)).toEqual(expected);
+  });
+
+  it("ignores spread that isnt a part of the expression", () => {
+    const input =
+      "hello...[:var [hello how is it going] ...[:awesome]] my name is iyxan";
+    const expected: ExpressionCell = [
+      "hello...",
+      {
+        type: "variableAccess",
+        identifier: "var",
+        args: [
+          {
+            type: "call",
+            identifier: "hello",
+            args: ["how", "is", "it", "going"],
+          },
+          {
+            type: "spread",
+            expr: {
+              type: "variableAccess",
+              identifier: "awesome",
+              args: [],
+            },
+          },
+        ],
+      },
+      " my name is iyxan",
+    ];
+
+    expect(parseExpressionCell(input)).toEqual(expected);
+  });
+
+  it("ignores spread that doesnt have three dots", () => {
+    const input = "hello...[:var ..[:hello]]";
+    const expected: ExpressionCell = [
+      "hello...",
+      {
+        type: "variableAccess",
+        identifier: "var",
+        args: [
+          {
+            type: "variableAccess",
+            identifier: "..hello",
+            args: [],
+          },
+        ],
+      },
+    ];
+
+    expect(parseExpressionCell(input)).toEqual(expected);
+  });
+
   it("should parse a rather complex expression", () => {
     const input =
       "[#repeatRow [:transactions length] y] [:transactions [:y] student fullName]";
