@@ -164,6 +164,45 @@ describe("expression evaluation", () => {
     expect(consoleWarnMock).toHaveBeenCalledOnce();
   });
 
+  it("spreads arrays correctly", (test) => {
+    const consoleWarnMock = mockWarn();
+    test.onTestFinished(() => consoleWarnMock.mockRestore());
+
+    // [call ...[:array]]
+    const expr: Expression = {
+      type: "call",
+      identifier: "call",
+      args: [
+        {
+          type: "spread",
+          expr: {
+            type: "variableAccess",
+            identifier: "array",
+            args: [],
+          },
+        },
+      ],
+    };
+
+    const result = evaluateExpression(
+      expr,
+      { col: 0, row: 0, callTree: ["root"] },
+      (fName) =>
+        fName === "call"
+          ? (_funcName, ...args) => success("called: " + JSON.stringify(args))
+          : undefined,
+      (vName) => (vName === "array" ? ["hello", "world"] : undefined),
+    );
+
+    if (result.status === "failed") {
+      throw new Error(JSON.stringify(result));
+    }
+
+    expect(result.issues).toHaveLength(0);
+    expect(result.result).toEqual('called: ["hello","world"]');
+    expect(consoleWarnMock).toHaveBeenCalledTimes(0);
+  });
+
   it("returns a function call when calling a lambda", (test) => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
@@ -247,14 +286,14 @@ describe("expression evaluation", () => {
       (fName) =>
         fName === "call"
           ? createTemplaterFunction(z.tuple([z.function()]), (s) => {
-              return s((vName: string) =>
-                vName === "world" ? "people!" : undefined,
-              );
-            })
+            return s((vName: string) =>
+              vName === "world" ? "people!" : undefined,
+            );
+          })
           : fName === "ret"
             ? createTemplaterFunction(z.tuple([z.string()]), (s) => {
-                return success(`ret ${s}`);
-              })
+              return success(`ret ${s}`);
+            })
             : undefined,
       (_vName) => undefined,
     );
@@ -407,19 +446,19 @@ describe("expression evaluation", () => {
       (vName) =>
         vName === "students"
           ? [
-              {
-                fullName: "John Doe",
-              },
-              {
-                fullName: "Jane Doe",
-              },
-              {
-                fullName: "Mark Doe",
-              },
-              {
-                fullName: "Mary Doe",
-              },
-            ]
+            {
+              fullName: "John Doe",
+            },
+            {
+              fullName: "Jane Doe",
+            },
+            {
+              fullName: "Mark Doe",
+            },
+            {
+              fullName: "Mary Doe",
+            },
+          ]
           : undefined,
     );
 
