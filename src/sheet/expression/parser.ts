@@ -55,8 +55,7 @@ export function parseExpressionCell(s: string): ExpressionCell {
 
         index++;
         let numberOfDots = 1;
-        let dotCheckChar;
-        while ((dotCheckChar = s[index]) === ".") {
+        while (s[index] === ".") {
           numberOfDots++;
           index++;
         }
