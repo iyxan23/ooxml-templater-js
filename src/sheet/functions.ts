@@ -5,6 +5,10 @@ import { callLambda, createTemplaterFunction } from "./templater-function";
 import { createTemplaterNoArgsFunction } from "./templater-function";
 import { success } from "./expression/result";
 
+import { startOfDay } from "date-fns/fp/startOfDay";
+import { differenceInDays } from "date-fns/fp/differenceInDays";
+import { differenceInSeconds } from "date-fns/fp/differenceInSeconds";
+
 // == array
 
 // usage:
@@ -177,8 +181,9 @@ const round = createTemplaterFunction(
       round ? Math.round(num * (round * 10)) / (round * 10) : Math.round(num),
     ),
 );
-const sum = createTemplaterFunction(z.tuple([]).rest(z.number()), (...nums) =>
-  success(nums.reduce((a, b) => a + b, 0)),
+const sum = createTemplaterFunction(
+  z.tuple([]).rest(z.coerce.number()),
+  (...nums) => success(nums.reduce((a, b) => a + b, 0)),
 );
 
 // == string
@@ -207,6 +212,16 @@ const if_ = createTemplaterFunction(
 const ifUndefined = createTemplaterFunction(
   z.tuple([z.any(), z.string()]),
   (a, b) => (a === undefined ? success(b) : success(a)),
+);
+
+// == working with date and times
+
+const now = createTemplaterNoArgsFunction(() => success(new Date()));
+const writeDate = createTemplaterFunction(z.tuple([z.coerce.date()]), (date) =>
+  success(differenceInDays(new Date(1900, 0, 0), startOfDay(date))),
+);
+const writeTime = createTemplaterFunction(z.tuple([z.coerce.date()]), (date) =>
+  success(differenceInSeconds(startOfDay(date), date) / (60 * 60 * 24)),
 );
 
 export const builtinFunctions = {
@@ -238,4 +253,8 @@ export const builtinFunctions = {
 
   if: if_,
   ifUndefined,
+
+  now,
+  writeDate,
+  writeTime,
 };

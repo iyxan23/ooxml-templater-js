@@ -58,6 +58,7 @@
   "sideEffects": false,
   "peerDependencies": {
     "@zip.js/zip.js": "^2",
+    "date-fns": "^4.1.0",
     "deepmerge": "^4",
     "fast-xml-parser": "^4",
     "zod": "^3"
