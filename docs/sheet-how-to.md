@@ -95,6 +95,31 @@ spaces), you can do that by using double quotes:
 > treated as strings. If you need to pass in a number, please also allow
 > strings to be coerced into numbers, just like how `z.coerce.number()` works.
 
+### Spreading Arguments
+
+Sometimes, when you have an array and you need to spread it as its own separate
+arguments. Let's say we have a function that returns an array of numbers, and
+we need to sum them together with the sum function. But the problem is that the
+sum function (its a builtin function) takes multiple arguments, not a single
+array. Like so:
+
+```
+[sum 1 2 3 4 5]
+```
+
+We can make use of the spread operator `...` before the argument expression to
+make it spread the array as each different arguments.
+
+```
+[sum ...[array 1 2 3 4 5]]
+```
+
+The experssion above will be interpreted as:
+
+```
+[sum 1 2 3 4 5]
+```
+
 ### Types of expressions
 
 There are essentially 5 different types of expressions:
