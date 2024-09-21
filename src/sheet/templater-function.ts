@@ -95,6 +95,19 @@ export function createTemplaterFunction<T extends z.AnyZodTuple, R>(
       );
     }
 
-    return call(...(result.data as MapFunctionsToLambdas<z.infer<T>>));
+    try {
+      return call(...(result.data as MapFunctionsToLambdas<z.infer<T>>));
+    } catch (e) {
+      return failure(
+        {
+          message: `Error while calling ${functionName}. trace: ${context.callTree.join(
+            " > ",
+          )}. Error: ${JSON.stringify(e)}`,
+          col: context.col,
+          row: context.row,
+        },
+        [],
+      );
+    }
   };
 }
