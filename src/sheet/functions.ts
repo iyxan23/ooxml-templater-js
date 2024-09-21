@@ -8,6 +8,7 @@ import { success } from "./expression/result";
 import { startOfDay } from "date-fns/fp/startOfDay";
 import { differenceInDays } from "date-fns/fp/differenceInDays";
 import { differenceInSeconds } from "date-fns/fp/differenceInSeconds";
+import { formatDate } from "date-fns/format";
 
 // == array
 
@@ -223,6 +224,10 @@ const writeDate = createTemplaterFunction(z.tuple([z.coerce.date()]), (date) =>
 const writeTime = createTemplaterFunction(z.tuple([z.coerce.date()]), (date) =>
   success(differenceInSeconds(startOfDay(date), date) / (60 * 60 * 24)),
 );
+const formatDate_ = createTemplaterFunction(
+  z.tuple([z.coerce.date(), z.string().optional()]),
+  (date, format = "yyyy-MM-dd") => success(formatDate(date, format)),
+);
 
 export const builtinFunctions = {
   array,
@@ -257,4 +262,5 @@ export const builtinFunctions = {
   now,
   writeDate,
   writeTime,
+  formatDate: formatDate_,
 };
