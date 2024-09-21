@@ -219,7 +219,7 @@ const ifUndefined = createTemplaterFunction(
 
 const now = createTemplaterNoArgsFunction(() => success(new Date()));
 const writeDate = createTemplaterFunction(z.tuple([z.coerce.date()]), (date) =>
-  success(differenceInDays(new Date(1900, 0, 0), startOfDay(date))),
+  success(differenceInDays(new Date(1900, 0, 0), startOfDay(date)) + 1),
 );
 const writeTime = createTemplaterFunction(z.tuple([z.coerce.date()]), (date) =>
   success(differenceInSeconds(startOfDay(date), date) / (60 * 60 * 24)),
