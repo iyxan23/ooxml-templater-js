@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { callLambda, createTemplaterFunction } from "./templater-function";
 import { createTemplaterNoArgsFunction } from "./templater-function";
-import { success } from "./expression/result";
+import { isResult, success } from "./expression/result";
 
 import { startOfDay } from "date-fns/fp/startOfDay";
 import { differenceInDays } from "date-fns/fp/differenceInDays";
@@ -22,6 +22,113 @@ const arrayEmpty = createTemplaterNoArgsFunction(() => []);
 const arrayAppend = createTemplaterFunction(
   z.tuple([z.any().array(), z.any()]),
   (arr, item) => success([...arr, item]),
+);
+const arrayConcat = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.array(z.any())]).rest(z.array(z.any())),
+  (a, b, ...others) => success([...a, ...b, ...others.flat()]),
+);
+const arrayAt = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.coerce.number()]),
+  (a, b) => success(a.at(b)),
+);
+const arraySlice = createTemplaterFunction(
+  z.tuple([
+    z.array(z.any()),
+    z.coerce.number().optional(),
+    z.coerce.number().optional(),
+  ]),
+  (arr, a, b) => success(arr.slice(a, b)),
+);
+const arrayIndexOf = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.any()]),
+  (arr, item) => success(arr.indexOf(item)),
+);
+const arrayLastIndexOf = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.any()]),
+  (arr, item) => success(arr.lastIndexOf(item)),
+);
+const arrayIncludes = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.any()]),
+  (arr, item) => success(arr.includes(item)),
+);
+const arrayFind = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.string(), z.function()]),
+  (arr, idxName, fn) => {
+    const callFn = callLambda(fn);
+    for (const item of arr) {
+      const result = callFn({
+        variables: {
+          [idxName]: item,
+        },
+      });
+
+      if (result.status === "failed") return result;
+      if (result.result) return success(result.result);
+    }
+    return success(undefined);
+  },
+);
+const arrayFindIndex = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.string(), z.function()]),
+  (arr, idxName, fn) => {
+    const callFn = callLambda(fn);
+    for (const [idx, item] of arr.entries()) {
+      const result = callFn({
+        variables: {
+          [idxName]: item,
+        },
+      });
+
+      if (result.status === "failed") return result;
+      if (result.result) return success(idx);
+    }
+    return success(-1);
+  },
+);
+const arrayFindLast = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.string(), z.function()]),
+  (arr, idxName, fn) => {
+    const callFn = callLambda(fn);
+    for (const item of Array.from(arr).reverse()) {
+      const result = callFn({
+        variables: {
+          [idxName]: item,
+        },
+      });
+
+      if (result.status === "failed") return result;
+      if (result.result) return success(result.result);
+    }
+
+    return success(undefined);
+  },
+);
+const arrayFindLastIndex = createTemplaterFunction(
+  z.tuple([z.array(z.any()), z.string(), z.function()]),
+  (arr, idxName, fn) => {
+    const callFn = callLambda(fn);
+    for (const [idx, item] of Array.from(arr.entries()).reverse()) {
+      const result = callFn({
+        variables: {
+          [idxName]: item,
+        },
+      });
+
+      if (result.status === "failed") return result;
+      if (result.result) return success(idx);
+    }
+
+    return success(-1);
+  },
+);
+const arrayReverse = createTemplaterFunction(
+  z.tuple([z.array(z.any())]),
+  (arr) => success([...arr].reverse()),
+);
+// todo: make it possible to use z.tuple(..).or() as argument type here
+// so we can do z.tuple([z.array(z.any())]).or(z.tuple([z.array(z.any()), z.string(), z.string(), z.function()]))
+const arraySort = createTemplaterFunction(z.tuple([z.array(z.any())]), (arr) =>
+  success(arr.toSorted()),
 );
 const length = createTemplaterFunction(z.tuple([z.array(z.any())]), (a) =>
   success(a.length),
@@ -175,6 +282,14 @@ const divide = createTemplaterFunction(
   z.tuple([z.coerce.number(), z.coerce.number()]),
   (a, b) => success(a / b),
 );
+const power = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(Math.pow(a, b)),
+);
+const mod = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a % b),
+);
 const round = createTemplaterFunction(
   z.tuple([z.coerce.number(), z.coerce.number().optional()]),
   (num, round) =>
@@ -186,10 +301,91 @@ const sum = createTemplaterFunction(
   z.tuple([]).rest(z.coerce.number()),
   (...nums) => success(nums.reduce((a, b) => a + b, 0)),
 );
+const floor = createTemplaterFunction(z.tuple([z.coerce.number()]), (num) =>
+  success(Math.floor(num)),
+);
+const ceil = createTemplaterFunction(z.tuple([z.coerce.number()]), (num) =>
+  success(Math.ceil(num)),
+);
+
+// == bitwise operations
+
+const bitAnd = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a & b),
+);
+const bitOr = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a | b),
+);
+const bitXor = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a ^ b),
+);
+const bitNot = createTemplaterFunction(z.tuple([z.coerce.number()]), (a) =>
+  success(~a),
+);
+const bitLShift = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a << b),
+);
+const bitRShift = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a >> b),
+);
+const bitURShift = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a >>> b),
+);
+
+// == boolean operations
+
+const eqStrict = createTemplaterFunction(z.tuple([z.any(), z.any()]), (a, b) =>
+  success(a === b),
+);
+const eqWeak = createTemplaterFunction(z.tuple([z.any(), z.any()]), (a, b) =>
+  success(a == b),
+);
+const neqStrict = createTemplaterFunction(z.tuple([z.any(), z.any()]), (a, b) =>
+  success(a !== b),
+);
+const neqWeak = createTemplaterFunction(z.tuple([z.any(), z.any()]), (a, b) =>
+  success(a != b),
+);
+const not = createTemplaterFunction(z.tuple([z.coerce.boolean()]), (a) =>
+  success(!a),
+);
+const or = createTemplaterFunction(
+  z.tuple([z.coerce.boolean(), z.coerce.boolean()]),
+  (a, b) => success(a || b),
+);
+const and = createTemplaterFunction(
+  z.tuple([z.coerce.boolean(), z.coerce.boolean()]),
+  (a, b) => success(a && b),
+);
+
+// == comparison
+
+const gt = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a > b),
+);
+const gte = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a >= b),
+);
+const lt = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a < b),
+);
+const lte = createTemplaterFunction(
+  z.tuple([z.coerce.number(), z.coerce.number()]),
+  (a, b) => success(a <= b),
+);
 
 // == string
 
-const concat = createTemplaterFunction(
+const strConcat = createTemplaterFunction(
   z.tuple([z.coerce.string(), z.coerce.string()]),
   (a, b) => success(a + b),
 );
@@ -229,10 +425,42 @@ const formatDate_ = createTemplaterFunction(
   (date, format = "yyyy-MM-dd") => success(formatDate(date, format)),
 );
 
+// == misc
+
+const undefined_ = createTemplaterNoArgsFunction(() => undefined);
+const null_ = createTemplaterNoArgsFunction(() => null);
+const call = createTemplaterFunction(
+  z.tuple([z.function(), z.any().optional()]),
+  (func, ths) => {
+    const result = func.call(ths);
+    if (isResult(result)) {
+      return result;
+    } else {
+      return success(result);
+    }
+  },
+);
+const typeOf = createTemplaterFunction(z.tuple([z.any()]), (a) =>
+  success(typeof a),
+);
+
 export const builtinFunctions = {
   array,
   arrayEmpty,
   arrayAppend,
+  arrayConcat,
+  arrayAt,
+  arraySlice,
+  arrayIndexOf,
+  arrayLastIndexOf,
+  arrayIncludes,
+  arrayFind,
+  arrayFindIndex,
+  arrayFindLast,
+  arrayFindLastIndex,
+  arrayReverse,
+  arraySort,
+
   flatten,
   reduce,
   map,
@@ -244,14 +472,40 @@ export const builtinFunctions = {
   values,
   entries,
 
+  bitAnd,
+  bitOr,
+  bitXor,
+  bitNot,
+  bitLShift,
+  bitRShift,
+  bitURShift,
+
+  eqStrict,
+  eqWeak,
+  neqStrict,
+  neqWeak,
+  not,
+  or,
+  and,
+
+  gt,
+  gte,
+  lt,
+  lte,
+
   add,
   subtract,
   multiply,
   divide,
+  mod,
+  power,
+
+  floor,
+  ceil,
   round,
   sum,
 
-  concat,
+  strConcat,
   join,
   jsonStringify,
   jsonParse,
@@ -263,4 +517,9 @@ export const builtinFunctions = {
   writeDate,
   writeTime,
   formatDate: formatDate_,
+
+  undefined: undefined_,
+  null: null_,
+  call,
+  typeOf,
 };
