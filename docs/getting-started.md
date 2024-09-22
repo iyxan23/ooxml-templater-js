@@ -17,9 +17,19 @@ by path as such in your `package.json` file:
 }
 ```
 
-and yes, the package name is only `ooxml-templater`, without the `-js`. The goal of
-using the `-js` suffix is to make the library.. i guess more distinguishable when
-searching.
+> and yes, the package name is only `ooxml-templater`, without the `-js`. The
+> goal of using the `-js` suffix is to make the library.. i guess more
+> distinguishable when searching.
+
+After putting the library in your `package.json`, you will also need to do an
+`npm ci` and `npm run build` to build `ooxml-templater-js` to be able to be
+used:
+
+```console
+$ cd path/to/ooxml-templater-js
+$ npm ci
+$ npm run build
+```
 
 ## Browser Support?
 
