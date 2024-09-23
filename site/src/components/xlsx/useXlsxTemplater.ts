@@ -1,4 +1,4 @@
-import { xlsxFillTemplate } from "ooxml-templater/xlsx";
+import { xlsxFillTemplate, type SheetFinishStatus } from "ooxml-templater/xlsx";
 import { create } from "zustand";
 import { streamToBlob } from "~/lib/utils";
 
@@ -11,6 +11,8 @@ interface XlsxTemplaterState {
 
   output: Blob | null;
   isPending: boolean;
+
+  logs: string[];
 
   doTemplate: () => Promise<void>;
 }
@@ -25,7 +27,10 @@ export const useXlsxTemplater = create<XlsxTemplaterState>()((set, get) => ({
   output: null,
   isPending: false,
 
+  logs: [],
+
   doTemplate: async () => {
+    set({ logs: [] });
     if (get().isPending) return;
 
     const file = get().file;
@@ -37,6 +42,7 @@ export const useXlsxTemplater = create<XlsxTemplaterState>()((set, get) => ({
       try {
         return JSON.parse(rawData);
       } catch {
+        set({ logs: ["JSON parse error, treating as string"] });
         return rawData;
       }
     })();
@@ -44,7 +50,21 @@ export const useXlsxTemplater = create<XlsxTemplaterState>()((set, get) => ({
     set({ isPending: true });
 
     const transform = new TransformStream();
-    void xlsxFillTemplate(file.stream(), transform.writable, inputData);
+    void xlsxFillTemplate(file.stream(), transform.writable, inputData, {
+      onSheetFinished: (sheetName: string, status: SheetFinishStatus) =>
+        set({
+          logs: [
+            ...get().logs,
+            status.status === "success"
+              ? `[success] ${sheetName}${status.issues.length > 0 ? ", with issues" : ""}`
+              : `[error] ${sheetName}. Fatal error: ${status.error.message} at column ${status.error.col + 1} and row ${status.error.row}`,
+            ...status.issues.map(
+              (i) =>
+                `[issue] ${sheetName}: ${i.message} at column ${i.col + 1} and row ${i.row + 1}`,
+            ),
+          ],
+        }),
+    });
 
     const blob = await streamToBlob(transform.readable);
 
