@@ -9,6 +9,7 @@ export default function DataInput() {
   const setData = useXlsxTemplater((state) => state.setData);
   const doTemplate = useXlsxTemplater((state) => state.doTemplate);
   const file = useXlsxTemplater((state) => state.file);
+  const logs = useXlsxTemplater((state) => state.logs);
 
   return (
     <>
@@ -20,13 +21,22 @@ export default function DataInput() {
         onChange={(e) => setData(e.target.value)}
         rows={15}
       />
-      <div className="flex flex-row justify-between gap-4 items-end">
-        <p className="text-sm text-muted-foreground">
-          Note: This is all happening on the client! (≧▽≦)
-        </p>
-        <Button disabled={isPending || !file} onClick={() => doTemplate()}>
-          Template
-        </Button>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-row justify-between gap-4 items-end">
+          <p className="text-sm text-muted-foreground">
+            Note: This is all happening on the client! (≧▽≦)
+          </p>
+          <Button disabled={isPending || !file} onClick={() => doTemplate()}>
+            Template
+          </Button>
+        </div>
+
+        <Textarea
+          rows={3}
+          disabled
+          value={logs.join("\n")}
+          className="font-mono resize-none"
+        />
       </div>
     </>
   );
