@@ -26,9 +26,26 @@ export default function DataInput() {
           <p className="text-sm text-muted-foreground">
             Note: This is all happening on the client! (≧▽≦)
           </p>
-          <Button disabled={isPending || !file} onClick={() => doTemplate()}>
-            Template
-          </Button>
+          <div className="flex flex-row gap-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "application/json";
+                input.onchange = () => {
+                  input.files?.[0] &&
+                    input.files[0].text().then(setData);
+                };
+                input.click();
+              }}
+            >
+              Import JSON
+            </Button>
+            <Button disabled={isPending || !file} onClick={() => doTemplate()}>
+              Template
+            </Button>
+          </div>
         </div>
 
         <Textarea
