@@ -6,8 +6,14 @@ Oh, so you want to use it? cool.
 
 `ooxml-templater-js` is an _interesting_ project of mine, that hasn't been published
 to npm yet, and will most likely not. Best you could do is by cloning this repo or
-adding it as a submodule to your existing github repo, and adding it as a dependency
-by path as such in your `package.json` file:
+adding it as a submodule to your existing github repo:
+
+```console
+$ # this will clone the staging branch instead of `main`, because the latter is prone to wip commits
+$ git clone -b staging https://github.com/iyxan23/ooxml-templater-js
+```
+
+Then add it as a dependency by path as such in your `package.json` file:
 
 ```json
 {
