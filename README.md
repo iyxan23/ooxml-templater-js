@@ -2,7 +2,8 @@
 
 <h1 align=center><pre>ooxml-templater-js</pre></h1>
 
-[![Node.js CI](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/node.js.yml/badge.svg)](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/node.js.yml)
+[![Main Branch Build & Test](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/build-and-test.yml)
+[![Staging Branch Build & Test (also deployment)](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/deploy.yml/badge.svg?branch=staging)](https://github.com/iyxan23/ooxml-templater-js/actions/workflows/deploy.yml)
 
 Template within your docs, and xlsx files.
 
