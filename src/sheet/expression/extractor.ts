@@ -1,4 +1,4 @@
-import type { ExpressionCell, Expression } from "./parser";
+import type { BasicExpressionsWithStaticTexts, BasicExpression } from "./parser";
 
 // one thing to keep in mind: in a single cell, there cannot be multiple
 // startBlock expressions yet, it's a limitation of the current implementation
@@ -6,7 +6,7 @@ import type { ExpressionCell, Expression } from "./parser";
 
 export type Block = {
   identifier: string;
-  arg: Expression;
+  arg: BasicExpression;
   indexVariableIdentifier: string;
 
   direction: "col" | "row";
@@ -61,18 +61,18 @@ type NestedOmit<
 // then returns both the hoists and the blocks that exists in this sheet
 export function extractHoistsAndBlocks(
   sheetBounds: { rowBound: number; colBound: number },
-  getCell: (col: number, row: number) => ExpressionCell | null,
-  setCell: (col: number, row: number, data: ExpressionCell) => void,
+  getCell: (col: number, row: number) => BasicExpressionsWithStaticTexts | null,
+  setCell: (col: number, row: number, data: BasicExpressionsWithStaticTexts) => void,
 ): {
   variableHoists: {
-    expr: Extract<Expression, { type: "variableHoist" }>;
+    expr: Extract<BasicExpression, { type: "variableHoist" }>;
     col: number;
     row: number;
   }[];
   blocks: Block[];
 } {
   const variableHoists: {
-    expr: Extract<Expression, { type: "variableHoist" }>;
+    expr: Extract<BasicExpression, { type: "variableHoist" }>;
     col: number;
     row: number;
   }[] = [];
@@ -83,7 +83,7 @@ export function extractHoistsAndBlocks(
   let col = 0;
 
   function parseBlock(
-    blockStart: Extract<Expression, { type: "blockStart" }>,
+    blockStart: Extract<BasicExpression, { type: "blockStart" }>,
     col: number,
     row: number,
   ): {
@@ -239,14 +239,14 @@ export function extractHoistsAndBlocks(
   }
 
   function parseCell(
-    parsedExpression: ExpressionCell,
+    parsedExpression: BasicExpressionsWithStaticTexts,
     col: number,
     row: number,
     removeEndBlock?: (
-      endBlock: Extract<Expression, { type: "blockEnd" }>,
+      endBlock: Extract<BasicExpression, { type: "blockEnd" }>,
     ) => boolean,
   ): {
-    cell: ExpressionCell;
+    cell: BasicExpressionsWithStaticTexts;
     blocks: Block[];
     endBlocks: {
       identifier: string;
@@ -259,7 +259,7 @@ export function extractHoistsAndBlocks(
       identifier: string;
       index: number;
     }[] = [];
-    const resultingContent: ExpressionCell = [];
+    const resultingContent: BasicExpressionsWithStaticTexts = [];
     let jumpTo: { col: number; row: number } | undefined;
     let parsedABlock = false;
 

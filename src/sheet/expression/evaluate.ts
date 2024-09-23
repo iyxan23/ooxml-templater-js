@@ -1,4 +1,4 @@
-import { Expression } from "./parser";
+import { BasicExpression } from "./parser";
 import { failure, Result, success } from "./result";
 
 // Rule of thumb when erroring out:
@@ -28,7 +28,7 @@ export type LambdaFunction<T> = (
 ) => Result<T>;
 
 export function evaluateExpression(
-  item: Expression,
+  item: BasicExpression,
   context: { col: number; row: number; callTree: string[] },
   lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
   lookupVariable: (name: string) => any | undefined,
@@ -55,7 +55,7 @@ export function evaluateExpression(
 type CanBeSpread<T> = { spread: boolean; data: T };
 
 function evaluateExpressionInternal(
-  item: Expression,
+  item: BasicExpression,
   context: { col: number; row: number; callTree: string[] },
   lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
   lookupVariable: (name: string) => any | undefined,

@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { extractHoistsAndBlocks } from "./extractor";
-import { parseExpressionCell, type ExpressionCell } from "./parser";
+import { parseBasicExpressions, type BasicExpressionsWithStaticTexts } from "./parser";
 import { Sheet } from "../sheet";
 
 function sheetAdapter(
-  sheet: Sheet<ExpressionCell>,
+  sheet: Sheet<BasicExpressionsWithStaticTexts>,
 ): Parameters<typeof extractHoistsAndBlocks> {
   return [
     sheet.getBounds(),
@@ -15,13 +15,13 @@ function sheetAdapter(
 
 describe("extractHoistsAndBlocks", () => {
   it("should collect a variable hoist", () => {
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
-        parseExpressionCell(" hello worldd!"),
-        parseExpressionCell(
+        parseBasicExpressions(" hello worldd!"),
+        parseBasicExpressions(
           "freeform [hoist hello [string hello world]] text horayy",
         ),
-        parseExpressionCell("hii hellooo"),
+        parseBasicExpressions("hii hellooo"),
       ],
     ]);
 
@@ -54,11 +54,11 @@ describe("extractHoistsAndBlocks", () => {
   });
 
   it("should label a simple repeatRow block", () => {
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
-        parseExpressionCell("[#repeatRow [hello] ident]"),
-        parseExpressionCell("i should be repeating by now"),
-        parseExpressionCell("[/#repeatRow]"),
+        parseBasicExpressions("[#repeatRow [hello] ident]"),
+        parseBasicExpressions("i should be repeating by now"),
+        parseBasicExpressions("[/#repeatRow]"),
       ],
     ]);
 
@@ -88,19 +88,19 @@ describe("extractHoistsAndBlocks", () => {
   });
 
   it("should label a simple repeatRow block with a lastCellAfterBlockEnd", () => {
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
-        parseExpressionCell(" hello worldd!"),
-        parseExpressionCell("[#repeatRow [hello] ident]"),
-        parseExpressionCell("i should be repeating by now"),
-        parseExpressionCell("[hello world]"),
-        parseExpressionCell("[/#repeatRow] woah [:cool alright] test"),
+        parseBasicExpressions(" hello worldd!"),
+        parseBasicExpressions("[#repeatRow [hello] ident]"),
+        parseBasicExpressions("i should be repeating by now"),
+        parseBasicExpressions("[hello world]"),
+        parseBasicExpressions("[/#repeatRow] woah [:cool alright] test"),
       ],
       [
-        parseExpressionCell("don't mind me"),
+        parseBasicExpressions("don't mind me"),
         null,
         null,
-        parseExpressionCell("not supposed to be included"),
+        parseBasicExpressions("not supposed to be included"),
       ],
     ]);
 
@@ -149,10 +149,10 @@ describe("extractHoistsAndBlocks", () => {
     expect(() =>
       extractHoistsAndBlocks(
         ...sheetAdapter(
-          new Sheet<ExpressionCell>([
+          new Sheet<BasicExpressionsWithStaticTexts>([
             [
-              parseExpressionCell("[#repeatRow [hello] ident]"),
-              parseExpressionCell("i should be repeating by now"),
+              parseBasicExpressions("[#repeatRow [hello] ident]"),
+              parseBasicExpressions("i should be repeating by now"),
             ],
           ]),
         ),
@@ -166,19 +166,19 @@ describe("extractHoistsAndBlocks", () => {
     expect(() =>
       extractHoistsAndBlocks(
         ...sheetAdapter(
-          new Sheet<ExpressionCell>([
-            [parseExpressionCell("hmm")],
+          new Sheet<BasicExpressionsWithStaticTexts>([
+            [parseBasicExpressions("hmm")],
             [
-              parseExpressionCell("hello world"),
-              parseExpressionCell("i should be repeating by now"),
-              parseExpressionCell("[#repeatRow [hello] ident]"),
-              parseExpressionCell("what"),
+              parseBasicExpressions("hello world"),
+              parseBasicExpressions("i should be repeating by now"),
+              parseBasicExpressions("[#repeatRow [hello] ident]"),
+              parseBasicExpressions("what"),
             ],
             [
-              parseExpressionCell("hello world"),
-              parseExpressionCell("testt"),
-              parseExpressionCell("i should be repeating by now"),
-              parseExpressionCell("what"),
+              parseBasicExpressions("hello world"),
+              parseBasicExpressions("testt"),
+              parseBasicExpressions("i should be repeating by now"),
+              parseBasicExpressions("what"),
             ],
           ]),
         ),
@@ -189,11 +189,11 @@ describe("extractHoistsAndBlocks", () => {
   });
 
   it("should label a repeatCol", () => {
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
         ["hello world"],
         ["2nd col"],
-        parseExpressionCell("[#repeatCol [:hello] world]"),
+        parseBasicExpressions("[#repeatCol [:hello] world]"),
         ["shouldn't be included"],
       ],
       [
@@ -205,7 +205,7 @@ describe("extractHoistsAndBlocks", () => {
       [
         ["not this"],
         ["not this"],
-        parseExpressionCell("[/#repeatCol]"),
+        parseBasicExpressions("[/#repeatCol]"),
         ["not this"],
       ],
     ]);
@@ -235,16 +235,16 @@ describe("extractHoistsAndBlocks", () => {
   });
 
   it("should label a repeatCol 2", () => {
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
         ["hello world"],
-        parseExpressionCell("[nope]"),
+        parseBasicExpressions("[nope]"),
         ["shouldn't be included"],
         ["not this"],
       ],
       [
         ["hello world"],
-        parseExpressionCell(
+        parseBasicExpressions(
           "[just before block] is [#repeatCol [:hello] world]",
         ),
         ["shouldn't be included"],
@@ -253,19 +253,19 @@ describe("extractHoistsAndBlocks", () => {
       ],
       [
         ["this shouldn't"],
-        parseExpressionCell("[here is a call [:hello] world]"),
+        parseBasicExpressions("[here is a call [:hello] world]"),
         ["this shouldn't"],
         ["not this"],
       ],
       [
         ["this shouldn't"],
-        parseExpressionCell("hmm cool [test hello world] wow"),
+        parseBasicExpressions("hmm cool [test hello world] wow"),
         ["this shouldn't"],
         ["not this"],
       ],
       [
         ["not this"],
-        parseExpressionCell("[/#repeatCol] after block [is this]"),
+        parseBasicExpressions("[/#repeatCol] after block [is this]"),
         ["not this"],
         ["not this"],
       ],
@@ -345,18 +345,18 @@ describe("extractHoistsAndBlocks", () => {
     expect(() =>
       extractHoistsAndBlocks(
         ...sheetAdapter(
-          new Sheet<ExpressionCell>([
+          new Sheet<BasicExpressionsWithStaticTexts>([
             [
-              parseExpressionCell("hmm"),
-              parseExpressionCell("hello world"),
-              parseExpressionCell("[#repeatCol [hello] ident]"),
-              parseExpressionCell("what"),
+              parseBasicExpressions("hmm"),
+              parseBasicExpressions("hello world"),
+              parseBasicExpressions("[#repeatCol [hello] ident]"),
+              parseBasicExpressions("what"),
             ],
             [
-              parseExpressionCell("hello world"),
-              parseExpressionCell("testt"),
-              parseExpressionCell("i should be repeating by now"),
-              parseExpressionCell("what"),
+              parseBasicExpressions("hello world"),
+              parseBasicExpressions("testt"),
+              parseBasicExpressions("i should be repeating by now"),
+              parseBasicExpressions("what"),
             ],
           ]),
         ),
@@ -370,18 +370,18 @@ describe("extractHoistsAndBlocks", () => {
     expect(() =>
       extractHoistsAndBlocks(
         ...sheetAdapter(
-          new Sheet<ExpressionCell>([
+          new Sheet<BasicExpressionsWithStaticTexts>([
             [],
             [
-              parseExpressionCell("hmm"),
-              parseExpressionCell("hello world"),
-              parseExpressionCell("what"),
-              parseExpressionCell("[#repeatCol [hello] ident]"),
+              parseBasicExpressions("hmm"),
+              parseBasicExpressions("hello world"),
+              parseBasicExpressions("what"),
+              parseBasicExpressions("[#repeatCol [hello] ident]"),
             ],
             [
-              parseExpressionCell("hello world"),
-              parseExpressionCell("testt"),
-              parseExpressionCell("i should be repeating by now"),
+              parseBasicExpressions("hello world"),
+              parseBasicExpressions("testt"),
+              parseBasicExpressions("i should be repeating by now"),
             ],
             [],
             [],
@@ -398,20 +398,20 @@ describe("extractHoistsAndBlocks", () => {
      * | . | # | . | .
      * | . | ^ | . | .
      */
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
-        parseExpressionCell("[#repeatRow [helloRow] row]"),
-        parseExpressionCell("[#repeatCol [helloCol] col]"),
-        parseExpressionCell("this shouldn't be included"),
-        parseExpressionCell("[/#repeatRow]"),
+        parseBasicExpressions("[#repeatRow [helloRow] row]"),
+        parseBasicExpressions("[#repeatCol [helloCol] col]"),
+        parseBasicExpressions("this shouldn't be included"),
+        parseBasicExpressions("[/#repeatRow]"),
       ],
       [
-        parseExpressionCell("this shouldn't be included"),
-        parseExpressionCell("i should be repeating by now"),
+        parseBasicExpressions("this shouldn't be included"),
+        parseBasicExpressions("i should be repeating by now"),
       ],
       [
-        parseExpressionCell("this shouldn't be included"),
-        parseExpressionCell("[/#repeatCol]"),
+        parseBasicExpressions("this shouldn't be included"),
+        parseBasicExpressions("[/#repeatCol]"),
       ],
     ]);
 
@@ -481,16 +481,16 @@ describe("extractHoistsAndBlocks", () => {
   });
 
   it("should be able to label overlapping repeatRow and repeatCol blocks", () => {
-    const sheet = new Sheet<ExpressionCell>([
+    const sheet = new Sheet<BasicExpressionsWithStaticTexts>([
       [
-        parseExpressionCell("a"),
-        parseExpressionCell("b"),
-        parseExpressionCell("[#repeatCol [:stuff length] col]"),
+        parseBasicExpressions("a"),
+        parseBasicExpressions("b"),
+        parseBasicExpressions("[#repeatCol [:stuff length] col]"),
       ],
       [
-        parseExpressionCell("[#repeatRow [:stuff length] row]"),
-        parseExpressionCell("repeating row"),
-        parseExpressionCell(
+        parseBasicExpressions("[#repeatRow [:stuff length] row]"),
+        parseBasicExpressions("repeating row"),
+        parseBasicExpressions(
           "intersection [:row] [:col] [/#repeatRow][/#repeatCol]",
         ),
       ],

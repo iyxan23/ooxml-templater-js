@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseExpressionCell, type ExpressionCell } from "./parser";
+import { parseBasicExpressions, type BasicExpressionsWithStaticTexts } from "./parser";
 
 describe("parseExpressionCell", () => {
   it("should parse a very simple call", () => {
     const input = "okeoke freeform [huh] text yay";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "okeoke freeform ",
       {
         type: "call",
@@ -14,13 +14,13 @@ describe("parseExpressionCell", () => {
       " text yay",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a string with spaces", () => {
     const input =
       'freeform [huh "hello world" "  hey you can do this!!!"] text yay';
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "freeform ",
       {
         type: "call",
@@ -30,12 +30,12 @@ describe("parseExpressionCell", () => {
       " text yay",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a simple call", () => {
     const input = "freeform [hello world] text yay";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "freeform ",
       {
         type: "call",
@@ -45,12 +45,12 @@ describe("parseExpressionCell", () => {
       " text yay",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a simple nested expression", () => {
     const input = "text [calling you [hello world] yay] oke";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "text ",
       {
         type: "call",
@@ -68,12 +68,12 @@ describe("parseExpressionCell", () => {
       " oke",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should be able to parse a simple variable access expression", () => {
     const input = "hello [:var] world";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "hello ",
       {
         type: "variableAccess",
@@ -83,12 +83,12 @@ describe("parseExpressionCell", () => {
       " world",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should be able to parse a variable access expression with args", () => {
     const input = "hello [:var arg arg arg] world";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "hello ",
       {
         type: "variableAccess",
@@ -98,12 +98,12 @@ describe("parseExpressionCell", () => {
       " world",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("parses a simple call expression wrapped with spread", () => {
     const input = "hello [:var ...[func]] world";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "hello ",
       {
         type: "variableAccess",
@@ -122,13 +122,13 @@ describe("parseExpressionCell", () => {
       " world",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("ignores spread that isnt a part of the expression", () => {
     const input =
       "hello...[:var [hello how is it going] ...[:awesome]] my name is iyxan";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "hello...",
       {
         type: "variableAccess",
@@ -152,12 +152,12 @@ describe("parseExpressionCell", () => {
       " my name is iyxan",
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("ignores spread that doesnt have three dots", () => {
     const input = "hello...[:var ..[:hello]]";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "hello...",
       {
         type: "variableAccess",
@@ -172,13 +172,13 @@ describe("parseExpressionCell", () => {
       },
     ];
 
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a rather complex expression", () => {
     const input =
       "[#repeatRow [:transactions length] y] [:transactions [:y] student fullName]";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       {
         type: "blockStart",
         identifier: "repeatRow",
@@ -206,12 +206,12 @@ describe("parseExpressionCell", () => {
         ],
       },
     ];
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a nested expression", () => {
     const input = "[formatIDR [:transactions [:y] payment amount]]";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       {
         type: "call",
         identifier: "formatIDR",
@@ -232,12 +232,12 @@ describe("parseExpressionCell", () => {
         ],
       },
     ];
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a nested lambda expression", () => {
     const input = "hello [lambda { [hello world] }] world";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "hello ",
       {
         type: "call",
@@ -255,13 +255,13 @@ describe("parseExpressionCell", () => {
       },
       " world",
     ];
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a hoist expression", () => {
     const input =
       "[hoist columns [unique [reduce [:transactions] item acc { [merge [:acc] [:item payment columnName]] } ]]]";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       {
         type: "variableHoist",
         identifier: "columns",
@@ -305,24 +305,24 @@ describe("parseExpressionCell", () => {
         },
       },
     ];
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse a block end expression", () => {
     const input = "[/#repeatRow]";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       {
         type: "blockEnd",
         identifier: "repeatRow",
       },
     ];
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
   it("should parse freeform text with an expression", () => {
     const input =
       "freeform text [stringify [reduce [:anArray] item acc { [merge [:acc] [:item array]] }]] hello world";
-    const expected: ExpressionCell = [
+    const expected: BasicExpressionsWithStaticTexts = [
       "freeform text ",
       {
         type: "call",
@@ -364,6 +364,6 @@ describe("parseExpressionCell", () => {
       },
       " hello world",
     ];
-    expect(parseExpressionCell(input)).toEqual(expected);
+    expect(parseBasicExpressions(input)).toEqual(expected);
   });
 });

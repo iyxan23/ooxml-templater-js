@@ -1,21 +1,23 @@
-export function parseExpressionCell(s: string): ExpressionCell {
-  const result: ExpressionCell = [];
+export function parseBasicExpressions(
+  input: string,
+): BasicExpressionsWithStaticTexts {
+  const result: BasicExpressionsWithStaticTexts = [];
   let currentBuf = "";
   let index = 0;
 
-  function parseExpression(): Expression {
-    let type: Expression["type"] | null = null;
+  function parseBasicExpression(): BasicExpression {
+    let type: BasicExpression["type"] | null = null;
     let identifier: string | null = null;
-    let args: (string | Expression)[] = [];
+    let args: (string | BasicExpression)[] = [];
 
-    if (s[index] === "[") {
+    if (input[index] === "[") {
       index++;
-    } else if (s[index] === "{") {
+    } else if (input[index] === "{") {
       index++;
 
-      while (s[index] !== "[" && index < s.length) index++;
-      const content = parseExpression();
-      while (s[index] !== "}" && index < s.length) index++;
+      while (input[index] !== "[" && index < input.length) index++;
+      const content = parseBasicExpression();
+      while (input[index] !== "}" && index < input.length) index++;
 
       return {
         type: "lambda",
@@ -23,29 +25,25 @@ export function parseExpressionCell(s: string): ExpressionCell {
       };
     }
 
-    if (s[index] === " " || s[index] === "\t") {
-      while ((s[index] === " " || s[index] === "\t") && index < s.length)
+    if (input[index] === " " || input[index] === "\t") {
+      while (
+        (input[index] === " " || input[index] === "\t") &&
+        index < input.length
+      )
         index++;
     }
 
-    if (s[index] === ":") {
+    if (input[index] === ":") {
       type = "variableAccess";
-      index++;
-    } else if (s[index] === "#") {
-      type = "blockStart";
-      index++;
-    } else if (s[index] === "/" && s[index + 1] === "#") {
-      type = "blockEnd";
-      index++;
       index++;
     } else {
       type = "call";
     }
 
     let char;
-    while ((char = s[index]) !== "]") {
+    while ((char = input[index]) !== "]") {
       if (char === "[" || char === "{") {
-        args.push(parseExpression());
+        args.push(parseBasicExpression());
         index++;
         continue;
       } else if (char === ".") {
@@ -55,7 +53,7 @@ export function parseExpressionCell(s: string): ExpressionCell {
 
         index++;
         let numberOfDots = 1;
-        while (s[index] === ".") {
+        while (input[index] === ".") {
           numberOfDots++;
           index++;
         }
@@ -67,14 +65,14 @@ export function parseExpressionCell(s: string): ExpressionCell {
         }
 
         // skip if there is no `[` right after it
-        if (s[index] !== "[") {
+        if (input[index] !== "[") {
           currentBuf += ".".repeat(numberOfDots);
           continue;
         }
 
         args.push({
           type: "spread",
-          expr: parseExpression(),
+          expr: parseBasicExpression(),
         });
 
         index++;
@@ -84,8 +82,8 @@ export function parseExpressionCell(s: string): ExpressionCell {
 
         index++;
 
-        while (index < s.length) {
-          const char = s[index];
+        while (index < input.length) {
+          const char = input[index];
           if (char === '"') break;
           str += char;
 
@@ -103,13 +101,7 @@ export function parseExpressionCell(s: string): ExpressionCell {
         }
 
         if (!identifier) {
-          if (currentBuf === "hoist") {
-            type = "variableHoist";
-          } else if (type === "variableHoist") {
-            identifier = currentBuf;
-          } else {
-            identifier = currentBuf;
-          }
+          identifier = currentBuf;
         } else {
           args.push(currentBuf);
         }
@@ -120,7 +112,7 @@ export function parseExpressionCell(s: string): ExpressionCell {
         continue;
       }
 
-      if (index >= s.length) {
+      if (index >= input.length) {
         console.error("[err] parser gone too far");
         break;
       }
@@ -130,13 +122,7 @@ export function parseExpressionCell(s: string): ExpressionCell {
     }
 
     if (!identifier) {
-      if (currentBuf === "hoist") {
-        type = "variableHoist";
-      } else if (type === "variableHoist") {
-        identifier = currentBuf;
-      } else {
-        identifier = currentBuf;
-      }
+      identifier = currentBuf;
       currentBuf = "";
     } else if (currentBuf) {
       args.push(currentBuf);
@@ -146,41 +132,42 @@ export function parseExpressionCell(s: string): ExpressionCell {
     if (!identifier) throw new Error("identifier has not been set yet");
     if (!type) throw new Error("could not determine the type");
 
-    if (type === "blockStart" || type === "variableAccess" || type === "call") {
-      return {
-        type,
-        identifier,
-        args,
-      };
-    } else if (type === "blockEnd") {
-      return {
-        type,
-        identifier,
-      };
-    } else if (type === "variableHoist") {
-      const expression = args[0];
-      if (!expression) throw new Error("expression must be set for hoist");
-      if (typeof expression === "string")
-        throw new Error("variable content must be an expression");
+    // type is either "call" or "variableAccess"
 
-      return {
-        type,
-        identifier,
-        expression,
-      };
+    if (type === "call") {
+      // let's further check if the identifier is a special call
+      const split = identifier.split("#");
+      if (split.length > 1) {
+        // this is a special function
+        const closing = identifier.startsWith("/");
+        const code = closing ? split[0]!.slice(1) : split[0]!;
+        const restIdent = split.slice(1).join("#"); // respect other `#` as identifier
+
+        return {
+          type: "specialCall",
+          code,
+          identifier: restIdent,
+          closing,
+          args,
+        };
+      }
     }
 
-    throw new Error("unreachable");
+    return {
+      type,
+      identifier,
+      args,
+    };
   }
 
-  while (index < s.length) {
-    const char = s[index];
+  while (index < input.length) {
+    const char = input[index];
 
     if (char === "[") {
       if (currentBuf) result.push(currentBuf);
       currentBuf = "";
 
-      const expr = parseExpression();
+      const expr = parseBasicExpression();
       result.push(expr);
     } else {
       currentBuf += char;
@@ -194,39 +181,33 @@ export function parseExpressionCell(s: string): ExpressionCell {
   return result;
 }
 
-export type ExpressionCell = (string | Expression)[];
+export type BasicExpressionsWithStaticTexts = (string | BasicExpression)[];
 
-export type Expression =
+export type BasicExpression =
+  // [r#specialCall]
   | {
-    type: "blockStart";
+    type: "specialCall";
+    code: string; // the text before `#`
     identifier: string;
-    args: (string | Expression)[];
-  }
-  | {
-    type: "blockEnd";
-    identifier: string;
+    closing: boolean; // whether it has `/` in the front
+    args: (string | BasicExpression)[];
   }
   | {
     // evaluation of this expression will be spread
     type: "spread";
-    expr: Expression;
+    expr: BasicExpression;
   }
   | {
     type: "call";
     identifier: string;
-    args: (string | Expression)[];
+    args: (string | BasicExpression)[];
   }
   | {
     type: "variableAccess";
     identifier: string;
-    args: (string | Expression)[];
-  }
-  | {
-    type: "variableHoist";
-    identifier: string;
-    expression: Expression;
+    args: (string | BasicExpression)[];
   }
   | {
     type: "lambda";
-    expression: Expression;
+    expression: BasicExpression;
   };

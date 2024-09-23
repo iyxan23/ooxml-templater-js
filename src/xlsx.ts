@@ -122,6 +122,7 @@ class XlsxCell implements TemplatableCell {
   }
 
   cloneWithTextContent(content: string): XlsxCell {
+    console.log(`"${this.text}" -> "${content}"`);
     const clone: XlsxCell = new XlsxCell(Object.assign({}, this.cell));
     clone.text = content === "" ? null : content;
     return clone;

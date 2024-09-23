@@ -2,7 +2,7 @@ import { z } from "zod";
 import { callLambda, createTemplaterFunction } from "../templater-function";
 import { createTemplaterNoArgsFunction } from "../templater-function";
 import { evaluateExpression, Issue } from "./evaluate";
-import { Expression } from "./parser";
+import { BasicExpression } from "./parser";
 import { success } from "./result";
 
 function mockWarn() {
@@ -14,7 +14,7 @@ describe("expression evaluation", () => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "variableAccess",
       identifier: "hello",
       args: [],
@@ -40,7 +40,7 @@ describe("expression evaluation", () => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "call",
       identifier: "hello",
       args: ["world"],
@@ -70,7 +70,7 @@ describe("expression evaluation", () => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "blockStart",
       identifier: "hello",
       args: [],
@@ -103,7 +103,7 @@ describe("expression evaluation", () => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "blockEnd",
       identifier: "hello",
     };
@@ -135,7 +135,7 @@ describe("expression evaluation", () => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "variableHoist",
       identifier: "hello",
       expression: { type: "variableAccess", identifier: "hello", args: [] },
@@ -169,7 +169,7 @@ describe("expression evaluation", () => {
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     // [call ...[:array]]
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "call",
       identifier: "call",
       args: [
@@ -208,7 +208,7 @@ describe("expression evaluation", () => {
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     // { [hello [:world]] }
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "lambda",
       expression: {
         type: "call",
@@ -259,7 +259,7 @@ describe("expression evaluation", () => {
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     // [call { [ret [:world]] }]
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "call",
       identifier: "call",
       args: [
@@ -312,7 +312,7 @@ describe("expression evaluation", () => {
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     // [:var hello world how is it going]
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "variableAccess",
       identifier: "var",
       args: ["hello", "world", "how", "is", "it", "going"],
@@ -343,7 +343,7 @@ describe("expression evaluation", () => {
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     // [:var hello world [how] is it going]
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "variableAccess",
       identifier: "var",
       args: [
@@ -384,7 +384,7 @@ describe("expression evaluation", () => {
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     // [join [map [:students] item { [:item fullName] } ] ", "]
-    const expr: Expression = {
+    const expr: BasicExpression = {
       type: "call",
       identifier: "join",
       args: [

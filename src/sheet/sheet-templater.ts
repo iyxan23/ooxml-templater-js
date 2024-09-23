@@ -1,4 +1,4 @@
-import { type ExpressionCell, parseExpressionCell } from "./expression/parser";
+import { type BasicExpressionsWithStaticTexts, parseBasicExpressions } from "./expression/parser";
 import { Block, extractHoistsAndBlocks } from "./expression/extractor";
 import { Sheet } from "./sheet";
 import {
@@ -429,7 +429,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
   }
 
   private evaluateExpressionCell(
-    cell: ExpressionCell,
+    cell: BasicExpressionsWithStaticTexts,
     sheetCell: SheetT,
     {
       context,
@@ -474,8 +474,8 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
 
   private parseExpressions(
     sheet: Sheet<SheetT>,
-  ): Sheet<[ExpressionCell, SheetT]> {
-    const expressionSheet = new Sheet<[ExpressionCell, SheetT]>();
+  ): Sheet<[BasicExpressionsWithStaticTexts, SheetT]> {
+    const expressionSheet = new Sheet<[BasicExpressionsWithStaticTexts, SheetT]>();
     const bounds = sheet.getBounds();
 
     for (let r = 0; r <= bounds.rowBound; r++) {
@@ -483,7 +483,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         const cell = sheet.getCell(c, r);
         if (!cell) continue;
 
-        const expressionCell = parseExpressionCell(cell.getTextContent());
+        const expressionCell = parseBasicExpressions(cell.getTextContent());
         expressionSheet.setCell(c, r, [expressionCell, cell]);
       }
     }
