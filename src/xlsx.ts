@@ -12,17 +12,17 @@ import { Issue, TemplaterFunction } from "./sheet/expression/evaluate";
 
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 
+export type SheetFinishStatus =
+  | { status: "success"; issues: Issue[] }
+  | { status: "failed"; issues: Issue[]; error: Issue };
+
 export async function xlsxFillTemplate(
   xlsx: ReadableStream,
   output: WritableStream,
   input: any,
   opts?: {
     functions?: Record<string, TemplaterFunction<any>>;
-    onSheetFinished: (
-      status:
-        | { status: "success"; issues: Issue[] }
-        | { status: "failed"; issues: Issue[]; error: Issue },
-    ) => void;
+    onSheetFinished: (sheetPath: string, status: SheetFinishStatus) => void;
   },
 ) {
   const zipWriter = new ZipWriter(output);
@@ -66,6 +66,7 @@ export async function xlsxFillTemplate(
     );
 
     opts?.onSheetFinished?.(
+      entry.filename,
       result.error
         ? { status: "failed", issues: result.issues, error: result.cause }
         : { status: "success", issues: result.issues },
