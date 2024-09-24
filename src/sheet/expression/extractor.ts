@@ -1,349 +1,106 @@
-import type { BasicExpressionsWithStaticTexts, BasicExpression } from "./parser";
+// extractor provides an API that can be used to implement custom extraction
+// logic from any form of way of storing expressions.
 
-// one thing to keep in mind: in a single cell, there cannot be multiple
-// startBlock expressions yet, it's a limitation of the current implementation
-// and i don't find myself needing that. so i'm going to leave it as is for now
+import type {
+  BasicExpressionsWithStaticTexts,
+  BasicExpression,
+} from "./parser";
 
-export type Block = {
-  identifier: string;
-  arg: BasicExpression;
-  indexVariableIdentifier: string;
+export interface Expressionish {
+  getExpression(): BasicExpressionsWithStaticTexts;
+  removeExpression(index: number): void;
+  replaceExpression(expr: BasicExpression): void;
+}
 
-  direction: "col" | "row";
+export interface Source<Addr, Item extends Expressionish> {
+  getItem(addr: Addr): Item | null;
+  setItem(addr: Addr, item: Item): void;
+}
 
-  innerBlocks: Block[];
+type VisitorAction<Item extends Expressionish> =
+  | undefined
+  | { replaceItem: Item }
+  | { replaceExpr: BasicExpression }
+  | { deleteExpr: true };
 
-  start: {
-    col: number;
-    row: number;
+export interface Visitor<Addr, Item extends Expressionish> {
+  visitSpecialCall(
+    addr: Addr,
+    item: Item,
+    expr: Extract<BasicExpression, { type: "specialCall" }>,
+    index: number,
+  ): VisitorAction<Item>;
 
-    // inclusive index of an item in an ExpressionCell where this block starts
-    // e.g. ['hello', { blockStart }, 'world'] will have a `block.start.startsAt = 1`
-    // because blockStart will be removed, the part that will be repeated will be
-    // ['hello', 'world'] <- 'world' will be repeated
-    startsAt: number;
-  };
-  end: {
-    col: number;
-    row: number;
+  visitCall(
+    addr: Addr,
+    item: Item,
+    expr: Extract<BasicExpression, { type: "call" }>,
+    index: number,
+  ): VisitorAction<Item>;
 
-    // inclusive index of an item in an ExpressionCell where this block ends
-    // e.g. ['hello', { blockEnd }, 'world'] will have a `block.start.endsAt = 1`
-    // because blockEnd will be removed, the part that will be repeated will be
-    // ['hello', 'world'] <- 'hello' will be repeated
-    endsAt: number;
-  };
-};
+  visitVariableAccess(
+    addr: Addr,
+    item: Item,
+    expr: Extract<BasicExpression, { type: "variableAccess" }>,
+    index: number,
+  ): VisitorAction<Item>;
 
-type NestedOmit<
-  Schema,
-  Path extends string,
-> = Path extends `${infer Head}.${infer Tail}`
-  ? Head extends keyof Schema
-  ? {
-    [K in keyof Schema]: K extends Head
-    ? NestedOmit<Schema[K], Tail>
-    : Schema[K];
-  }
-  : Schema
-  : Omit<Schema, Path>;
+  visitSpread(
+    addr: Addr,
+    item: Item,
+    expr: Extract<BasicExpression, { type: "spread" }>,
+    index: number,
+  ): VisitorAction<Item>;
+}
 
-// This is stage 1 of the expression interpreter
-//
-// What this function does is that it:
-//
-//  1. extracts `[hoist .. ..]` expressions off of the given sheet (removes it
-//     by mutating the given sheet), and
-//
-//  2. extracts `[#block .. ..]` and `[/#block]` expressions off of the given
-//     sheet (removing by mutating it)
-//
-// then returns both the hoists and the blocks that exists in this sheet
-export function extractHoistsAndBlocks(
-  sheetBounds: { rowBound: number; colBound: number },
-  getCell: (col: number, row: number) => BasicExpressionsWithStaticTexts | null,
-  setCell: (col: number, row: number, data: BasicExpressionsWithStaticTexts) => void,
-): {
-  variableHoists: {
-    expr: Extract<BasicExpression, { type: "variableHoist" }>;
-    col: number;
-    row: number;
-  }[];
-  blocks: Block[];
-} {
-  const variableHoists: {
-    expr: Extract<BasicExpression, { type: "variableHoist" }>;
-    col: number;
-    row: number;
-  }[] = [];
+export function extract<Addr, Item extends Expressionish>(
+  source: Source<Addr, Item>,
+  visitor: Visitor<Addr, Item>,
+  start: Addr,
+  advance: (curAddr: Addr) => Addr | null,
+) {
+  let curAddr: Addr | null = start;
 
-  const blocks: Block[] = [];
+  while (curAddr !== null) {
+    const item = source.getItem(curAddr);
+    if (!item) break;
 
-  let row = 0;
-  let col = 0;
+    if (item.getExpression().length === 0) break;
 
-  function parseBlock(
-    blockStart: Extract<BasicExpression, { type: "blockStart" }>,
-    col: number,
-    row: number,
-  ): {
-    // startsAt
-    block: NestedOmit<Block, "start.startsAt">;
-    jumpTo: { col: number; row: number };
-  } {
-    const previous = { col, row };
-    const innerBlocks: Block[] = [];
+    for (let index = 0; index < item.getExpression().length; index++) {
+      const expr = item.getExpression()[index]!;
+      if (typeof expr !== "object") continue;
 
-    if (blockStart.identifier === "repeatRow") {
-      col++;
-      // expect a [#repeatRow [<number>] <identifier>] ... [/#repeatRow] going in the direction of a row
-      const repeatCountExpr = blockStart.args[0];
-      if (typeof repeatCountExpr !== "object")
-        throw new Error(`at row ${row}, column ${col}: expected an expression`);
+      let result: VisitorAction<Item>;
 
-      const indexVariableIdentifier = blockStart.args[1];
-      if (typeof indexVariableIdentifier !== "string")
-        throw new Error(
-          `at row ${row}, column ${col}: expected an identifier to name the index variable`,
-        );
-
-      // go to cells to the right, until we encounter a blockEnd with the same identifier [/#repeatRow]
-      while (col <= sheetBounds.colBound) {
-        const cell = getCell(col, row);
-        if (cell === null) {
-          col++;
-          continue;
-        }
-
-        const {
-          cell: result,
-          blocks,
-          endBlocks,
-          jumpTo,
-        } = parseCell(
-          cell,
-          col,
-          row,
-          (block) => block.identifier === "repeatRow",
-        );
-
-        setCell(col, row, result);
-        innerBlocks.push(...blocks);
-
-        if (jumpTo) {
-          // jumpTo is here to prevent us from reading the same cells twice
-          col = jumpTo.col;
-          row = jumpTo.row;
-        }
-
-        if (!result) {
-          col++;
-          continue;
-        }
-
-        const endBlock = endBlocks.find(
-          (b) => b.identifier === blockStart.identifier,
-        );
-
-        if (!endBlock) {
-          col++;
-          continue;
-        }
-
-        return {
-          block: {
-            identifier: blockStart.identifier,
-            innerBlocks,
-            arg: repeatCountExpr,
-            indexVariableIdentifier,
-            direction: "row",
-            start: { ...previous },
-            end: { col, row, endsAt: endBlock.index },
-          },
-          jumpTo: { col, row },
-        };
+      switch (expr.type) {
+        case "call":
+          result = visitor.visitCall(curAddr, item, expr, index);
+          break;
+        case "variableAccess":
+          result = visitor.visitVariableAccess(curAddr, item, expr, index);
+          break;
+        case "spread":
+          result = visitor.visitSpread(curAddr, item, expr, index);
+          break;
+        case "specialCall":
+          result = visitor.visitSpecialCall(curAddr, item, expr, index);
+          break;
       }
-    } else if (blockStart.identifier === "repeatCol") {
-      row++;
-      // expect a [#repeatCol [<number>] <identifier>] ... [/#repeatCol] going in the direction of a column
-      const repeatCountExpr = blockStart.args[0];
-      if (typeof repeatCountExpr !== "object")
-        throw new Error(`at row ${row}, column ${col}: expected an expression`);
 
-      const indexVariableIdentifier = blockStart.args[1];
-      if (typeof indexVariableIdentifier !== "string")
-        throw new Error(
-          `at row ${row}, column ${col}: expected an identifier to name the index variable`,
-        );
+      if (result === undefined) continue;
 
-      // go to cells to the right, until we encounter a blockEnd with the same identifier [/#repeatCol]
-      while (row <= sheetBounds.rowBound) {
-        const cell = getCell(col, row);
-        if (cell === null) {
-          row++;
-          continue;
-        }
-
-        const {
-          cell: result,
-          blocks,
-          endBlocks,
-          jumpTo,
-        } = parseCell(
-          cell,
-          col,
-          row,
-          (block) => block.identifier === "repeatCol",
-        );
-        setCell(col, row, result);
-        innerBlocks.push(...blocks);
-
-        if (jumpTo) {
-          // jumpTo is here to prevent us from reading the same cells twice
-          col = jumpTo.col;
-          row = jumpTo.row;
-        }
-
-        if (!result) {
-          row++;
-          continue;
-        }
-
-        const endBlock = endBlocks.find(
-          (b) => b.identifier === blockStart.identifier,
-        );
-
-        if (!endBlock) {
-          row++;
-          continue;
-        }
-
-        return {
-          block: {
-            identifier: blockStart.identifier,
-            innerBlocks,
-            arg: repeatCountExpr,
-            indexVariableIdentifier,
-            direction: "col",
-            start: { ...previous },
-            end: { col, row, endsAt: endBlock.index },
-          },
-          jumpTo: previous,
-        };
+      if ("replaceItem" in result) {
+        source.setItem(curAddr, result.replaceItem);
+        break;
+      } else if ("replaceExpr" in result) {
+        item.replaceExpression(result.replaceExpr);
+        break;
+      } else if ("deleteExpr" in result) {
+        item.removeExpression(index);
       }
     }
 
-    throw new Error(
-      `block with identifier \`${blockStart.identifier}\` at col ${previous.col}, row ${previous.row} is not closed`,
-    );
+    curAddr = advance(curAddr);
   }
-
-  function parseCell(
-    parsedExpression: BasicExpressionsWithStaticTexts,
-    col: number,
-    row: number,
-    removeEndBlock?: (
-      endBlock: Extract<BasicExpression, { type: "blockEnd" }>,
-    ) => boolean,
-  ): {
-    cell: BasicExpressionsWithStaticTexts;
-    blocks: Block[];
-    endBlocks: {
-      identifier: string;
-      index: number;
-    }[];
-    jumpTo?: { col: number; row: number };
-  } {
-    const blocks: Block[] = [];
-    const endBlocks: {
-      identifier: string;
-      index: number;
-    }[] = [];
-    const resultingContent: BasicExpressionsWithStaticTexts = [];
-    let jumpTo: { col: number; row: number } | undefined;
-    let parsedABlock = false;
-
-    for (let index = 0; index < parsedExpression.length; index++) {
-      const item = parsedExpression[index]!;
-
-      if (typeof item !== "object") {
-        resultingContent.push(item);
-        continue;
-      }
-
-      if (item.type === "variableHoist") {
-        variableHoists.push({ expr: item, col, row });
-      } else if (item.type === "blockStart") {
-        if (parsedABlock)
-          throw new Error(
-            "cannot have two startBlock expressions in the same cell, this" +
-            " is a limitation of the current implementation.",
-          );
-
-        const { block, jumpTo: blockJumpTo } = parseBlock(item, col, row);
-
-        jumpTo = blockJumpTo;
-        blocks.push({ ...block, start: { ...block.start, startsAt: index } });
-        parsedABlock = true;
-      } else if (item.type === "blockEnd") {
-        const removeIt = removeEndBlock?.(item) ?? false;
-
-        if (removeIt) endBlocks.push({ identifier: item.identifier, index });
-        else {
-          resultingContent.push(item);
-          continue;
-        }
-      } else {
-        resultingContent.push(item);
-        continue;
-      }
-
-      // merge the string at the front/back together
-      const prevElement = resultingContent[resultingContent.length - 1];
-      const nextElement = parsedExpression[index + 1];
-
-      if (
-        index > 0 &&
-        typeof prevElement === "string" &&
-        typeof nextElement === "string"
-      ) {
-        resultingContent[resultingContent.length - 1] =
-          `${prevElement}${nextElement}`;
-        index++; // skip the nextElement
-      }
-    }
-
-    return { cell: resultingContent, blocks, endBlocks, jumpTo };
-  }
-
-  while (row <= sheetBounds.rowBound) {
-    while (col <= sheetBounds.colBound) {
-      const cell = getCell(col, row);
-      if (cell === null) {
-        col++;
-        continue;
-      }
-
-      const {
-        cell: result,
-        blocks: newBlocks,
-        jumpTo,
-      } = parseCell(cell, col, row, () => false);
-      setCell(col, row, result);
-      if (jumpTo) {
-        // jumpTo is here to prevent us from reading the same cells twice
-        col = jumpTo.col;
-        row = jumpTo.row;
-      }
-
-      blocks.push(...newBlocks);
-
-      col++;
-    }
-
-    col = 0;
-    row++;
-  }
-
-  return { variableHoists, blocks };
 }
