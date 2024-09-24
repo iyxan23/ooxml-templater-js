@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { LambdaFunction, TemplaterFunction } from "./expression/evaluate";
-import { failure, Result, success } from "./expression/result";
+import { LambdaFunction, TemplaterFunction } from "../evaluate";
+import { failure, Result, success } from "../../result";
 
 export function createTemplaterNoArgsFunction<R>(
   call: () => R,

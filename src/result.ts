@@ -1,7 +1,12 @@
-import { Issue } from "./evaluate";
-
 export const resultSymbol = Symbol("result");
 export type ResultSymbol = typeof resultSymbol;
+
+export type Issue = {
+  col: number;
+  row: number;
+  message: string;
+  index?: number;
+};
 
 export type Result<T> =
   | { status: "success"; result: T; issues: Issue[]; sym: ResultSymbol }

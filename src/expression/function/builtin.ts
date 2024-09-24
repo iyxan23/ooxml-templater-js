@@ -1,9 +1,12 @@
 // Default built-in functions
 
 import { z } from "zod";
-import { callLambda, createTemplaterFunction } from "./templater-function";
-import { createTemplaterNoArgsFunction } from "./templater-function";
-import { isResult, success } from "./expression/result";
+import {
+  createTemplaterNoArgsFunction,
+  callLambda,
+  createTemplaterFunction,
+} from "./wrapper";
+import { isResult, success } from "../../result";
 
 import { startOfDay } from "date-fns/fp/startOfDay";
 import { differenceInDays } from "date-fns/fp/differenceInDays";

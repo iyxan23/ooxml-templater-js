@@ -1,16 +1,9 @@
 import { BasicExpression } from "./parser";
-import { failure, Result, success } from "./result";
+import { failure, Result, success } from "../result";
 
 // Rule of thumb when erroring out:
 //  - use `failure()` when it is a user error
 //  - use throw new Error() when it is a fatal error from the author itself
-
-export type Issue = {
-  col: number;
-  row: number;
-  message: string;
-  index?: number;
-};
 
 export type TemplaterFunctionContext = {
   functionName: string;

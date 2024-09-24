@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { callLambda, createTemplaterFunction } from "../templater-function";
-import { createTemplaterNoArgsFunction } from "../templater-function";
-import { evaluateExpression, Issue } from "./evaluate";
+import { callLambda, createTemplaterFunction } from "./function/wrapper";
+import { createTemplaterNoArgsFunction } from "./function/wrapper";
+import { evaluateExpression } from "./evaluate";
+import { Issue } from "src/result";
 import { BasicExpression } from "./parser";
-import { success } from "./result";
+import { success } from "../result";
 
 function mockWarn() {
   return vi.spyOn(console, "warn").mockImplementation(() => undefined);

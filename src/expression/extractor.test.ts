@@ -5,7 +5,7 @@ import {
   BasicExpressionsWithStaticTexts,
   parseBasicExpressions,
 } from "./parser";
-import { Sheet } from "../sheet";
+import { Sheet } from "../sheet/sheet";
 
 class ItemAdapter implements Expressionish {
   constructor(private item: BasicExpressionsWithStaticTexts) {}

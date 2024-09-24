@@ -1,15 +1,17 @@
-import { type BasicExpressionsWithStaticTexts, parseBasicExpressions } from "./expression/parser";
-import { Block, extractHoistsAndBlocks } from "./expression/extractor";
+import {
+  type BasicExpressionsWithStaticTexts,
+  parseBasicExpressions,
+} from "../expression/parser";
+import { Block, extractHoistsAndBlocks } from "../expression/extractor";
 import { Sheet } from "./sheet";
 import {
   evaluateExpression,
-  Issue,
   TemplaterFunction,
-} from "./expression/evaluate";
-import { resultSymbol, success } from "./expression/result";
-import { Result } from "./expression/result";
+} from "../expression/evaluate";
+import { Issue } from "src/result";
+import { Result, resultSymbol, success } from "../result";
 import deepmerge from "deepmerge";
-import { builtinFunctions } from "./functions";
+import { builtinFunctions } from "../expression/function/builtin";
 
 export interface TemplatableCell {
   getTextContent(): string;
@@ -187,9 +189,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
   private expandBlocks<T>(
     sheet: Sheet<T>,
     blocks: Block[],
-    lookupFunction: (
-      name: string,
-    ) => TemplaterFunction<any> | undefined,
+    lookupFunction: (name: string) => TemplaterFunction<any> | undefined,
     lookupVariable: (name: string) => any | undefined,
     sheetShiftEmitter: SheetShiftEmitter,
   ): Result<Indexable2DArray<Record<string, any>>> {
@@ -475,7 +475,9 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
   private parseExpressions(
     sheet: Sheet<SheetT>,
   ): Sheet<[BasicExpressionsWithStaticTexts, SheetT]> {
-    const expressionSheet = new Sheet<[BasicExpressionsWithStaticTexts, SheetT]>();
+    const expressionSheet = new Sheet<
+      [BasicExpressionsWithStaticTexts, SheetT]
+    >();
     const bounds = sheet.getBounds();
 
     for (let r = 0; r <= bounds.rowBound; r++) {

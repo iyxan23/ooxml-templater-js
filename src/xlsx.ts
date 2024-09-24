@@ -8,7 +8,8 @@ import {
 import { startVisiting } from "./visitor-editor";
 import { Sheet } from "./sheet/sheet";
 import { SheetTemplater, TemplatableCell } from "./sheet/sheet-templater";
-import { Issue, TemplaterFunction } from "./sheet/expression/evaluate";
+import { TemplaterFunction } from "./expression/evaluate";
+import { Issue } from "./result";
 
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 
