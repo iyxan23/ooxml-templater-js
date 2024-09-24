@@ -67,79 +67,16 @@ describe("expression evaluation", () => {
     expect(consoleWarnMock).toHaveBeenCalledTimes(0);
   });
 
-  it("returns an issue when encountering blockStart", (test) => {
+  it("returns an issue when encountering specialCall", (test) => {
     const consoleWarnMock = mockWarn();
     test.onTestFinished(() => consoleWarnMock.mockRestore());
 
     const expr: BasicExpression = {
-      type: "blockStart",
+      type: "specialCall",
+      code: "a",
+      closing: false,
       identifier: "hello",
       args: [],
-    };
-
-    const result = evaluateExpression(
-      expr,
-      { col: 0, row: 0, callTree: ["root"] },
-      (_fName) => undefined,
-      (_vName) => undefined,
-    );
-
-    if (result.status === "failed") {
-      throw new Error(JSON.stringify(result));
-    }
-
-    expect(result.result).toBeUndefined();
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues).toContainEqual(
-      expect.objectContaining({
-        col: 0,
-        row: 0,
-        // message may change
-      }),
-    );
-    expect(consoleWarnMock).toHaveBeenCalledOnce();
-  });
-
-  it("returns an issue when encountering blockEnd", (test) => {
-    const consoleWarnMock = mockWarn();
-    test.onTestFinished(() => consoleWarnMock.mockRestore());
-
-    const expr: BasicExpression = {
-      type: "blockEnd",
-      identifier: "hello",
-    };
-
-    const result = evaluateExpression(
-      expr,
-      { col: 0, row: 0, callTree: ["root"] },
-      (_fName) => undefined,
-      (_vName) => undefined,
-    );
-
-    if (result.status === "failed") {
-      throw new Error(JSON.stringify(result));
-    }
-
-    expect(result.result).toBeUndefined();
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues).toContainEqual(
-      expect.objectContaining({
-        col: 0,
-        row: 0,
-        // message may change
-      }),
-    );
-    expect(consoleWarnMock).toHaveBeenCalledOnce();
-  });
-
-  it("returns an issue when encountering variableHoist", (test) => {
-    const consoleWarnMock = mockWarn();
-    test.onTestFinished(() => consoleWarnMock.mockRestore());
-
-    const expr: BasicExpression = {
-      type: "variableHoist",
-      identifier: "hello",
-      expression: { type: "variableAccess", identifier: "hello", args: [] },
     };
 
     const result = evaluateExpression(
@@ -287,14 +224,14 @@ describe("expression evaluation", () => {
       (fName) =>
         fName === "call"
           ? createTemplaterFunction(z.tuple([z.function()]), (s) => {
-            return s((vName: string) =>
-              vName === "world" ? "people!" : undefined,
-            );
-          })
+              return s((vName: string) =>
+                vName === "world" ? "people!" : undefined,
+              );
+            })
           : fName === "ret"
             ? createTemplaterFunction(z.tuple([z.string()]), (s) => {
-              return success(`ret ${s}`);
-            })
+                return success(`ret ${s}`);
+              })
             : undefined,
       (_vName) => undefined,
     );
@@ -447,19 +384,19 @@ describe("expression evaluation", () => {
       (vName) =>
         vName === "students"
           ? [
-            {
-              fullName: "John Doe",
-            },
-            {
-              fullName: "Jane Doe",
-            },
-            {
-              fullName: "Mark Doe",
-            },
-            {
-              fullName: "Mary Doe",
-            },
-          ]
+              {
+                fullName: "John Doe",
+              },
+              {
+                fullName: "Jane Doe",
+              },
+              {
+                fullName: "Mark Doe",
+              },
+              {
+                fullName: "Mary Doe",
+              },
+            ]
           : undefined,
     );
 

@@ -53,14 +53,10 @@ function evaluateExpressionInternal(
   lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<CanBeSpread<any | undefined>> {
-  if (
-    item.type === "blockStart" ||
-    item.type === "blockEnd" ||
-    item.type === "variableHoist"
-  ) {
+  if (item.type == "specialCall") {
     console.warn(
-      `at col ${context.col} ${context.row} ${item.type} is not supposed` +
-      ` to be in the evaluation stage.`,
+      `at col ${context.col} ${context.row}, special call is not supposed` +
+        ` to be in the evaluation stage.`,
     );
 
     return success({ spread: false, data: undefined }, [
@@ -68,7 +64,7 @@ function evaluateExpressionInternal(
         col: context.col,
         row: context.row,
         message:
-          `expressions of type ${item.type} is not supposed to be` +
+          `expressions of type specialCall is not supposed to be` +
           ` in the evaluation stage.`,
       },
     ]);
