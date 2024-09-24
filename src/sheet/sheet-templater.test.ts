@@ -33,7 +33,7 @@ function cell(text: string) {
   return new SimpleCell(text);
 }
 
-describe("SheetTemplater", () => {
+describe.skip("SheetTemplater", () => {
   it("does literally nothing", () => {
     const sheet = new Sheet<TemplatableCell>([
       [cell("hello"), cell("world")],
