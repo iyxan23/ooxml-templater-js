@@ -18,22 +18,10 @@ export type Block = {
   start: {
     col: number;
     row: number;
-
-    // inclusive index of an item in a BasicExpression where this block starts
-    // e.g. ['hello', { blockStart }, 'world'] will have a `block.start.startsAt = 1`
-    // because blockStart will be removed, the part that will be repeated will be
-    // ['hello', 'world'] <- 'world' will be repeated
-    startsAt: number;
   };
   end: {
     col: number;
     row: number;
-
-    // inclusive index of an item in a BasicExpression where this block ends
-    // e.g. ['hello', { blockEnd }, 'world'] will have a `block.start.endsAt = 1`
-    // because blockEnd will be removed, the part that will be repeated will be
-    // ['hello', 'world'] <- 'hello' will be repeated
-    endsAt: number;
   };
 };
 
@@ -95,7 +83,28 @@ export function extractVarsAndBlocks<SheetT>(
   variables: VariableHoist[];
   issues: Issue[];
 } {
+  const { rowBound, colBound } = sheet.getBounds();
+
+  return extractVarsAndBlocksInternal(sheet, ([curCol, curRow]) =>
+    curCol >= colBound
+      ? curRow >= rowBound
+        ? null
+        : [0, curRow + 1]
+      : [curCol + 1, curRow],
+  );
+}
+
+function extractVarsAndBlocksInternal<SheetT>(
+  sheet: Sheet<[BasicExpressionsWithStaticTexts, SheetT]>,
+  advanceStrategy: (addr: SheetAddr) => SheetAddr | null,
+  beforeVisitExpression?: (expr: BasicExpression) => void | { stop: true },
+): {
+  blocks: Block[];
+  variables: VariableHoist[];
+  issues: Issue[];
+} {
   const source = new SheetAdapter<SheetT>(sheet);
+
   const { rowBound, colBound } = sheet.getBounds();
 
   const blocks: Block[] = [];
@@ -144,14 +153,222 @@ export function extractVarsAndBlocks<SheetT>(
 
         return { deleteExpr: true };
       },
+
+      visitSpecialCall(addr, _item, expr, _index) {
+        // todo: make this extensible
+        if (expr.code === "r" && expr.identifier === "repeatRow")
+          return { deleteExpr: true };
+        if (expr.code === "c" && expr.identifier === "repeatCol")
+          return { deleteExpr: true };
+
+        const [col, row] = addr;
+        const args = expr.args;
+
+        if (expr.code === "r" && expr.identifier === "repeatRow") {
+          // recursively spin up another extractor that searches for the
+          // closing repeatRow
+          let closingExpr: { col: number; row: number } | undefined = undefined;
+
+          const {
+            blocks: innerBlocks,
+            variables: newVariables,
+            issues: otherIssues,
+          } = extractVarsAndBlocksInternal(
+            sheet,
+            ([cCol, cRow]) => {
+              // stop once we found a closing repeatRow
+              if (closingExpr !== undefined) return null;
+
+              if (cCol + 1 >= colBound) {
+                if (cRow + 1 >= rowBound) return null;
+                return [0, cRow + 1];
+              }
+
+              return [cCol + 1, cRow];
+            },
+            (expr) => {
+              if (
+                expr.type !== "specialCall" ||
+                (expr.code !== "r" &&
+                  expr.identifier !== "repeatRow" &&
+                  !expr.closing)
+              )
+                return;
+
+              const [cCol, cRow] = addr;
+
+              closingExpr = { col: cCol, row: cRow };
+
+              // we got it!
+              return { stop: true };
+            },
+          );
+
+          variables.push(...newVariables);
+          issues.push(...otherIssues);
+
+          if (closingExpr === undefined) {
+            issues.push({
+              message: "closing repeatRow not found",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          if (args.length !== 2) {
+            issues.push({
+              message:
+                "repeatRow must have at least two arguments: number of repeats, and a local index variable identifier",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          const [numRepeats, indexVariableIdent] = args;
+
+          if (typeof numRepeats === "string") {
+            issues.push({
+              message:
+                "repeatRow's first argument must be an expression of number",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          if (typeof indexVariableIdent !== "string") {
+            issues.push({
+              message: "repeatRow's second argument must be an identifier",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          blocks.push({
+            identifier: "repeatRow",
+            arg: numRepeats!,
+            indexVariableIdentifier: indexVariableIdent,
+
+            direction: "row",
+            innerBlocks,
+
+            start: { col, row },
+            end: closingExpr,
+          });
+
+          return { deleteExpr: true };
+        } else if (expr.code === "c" && expr.identifier === "repeatCol") {
+          // recursively spin up another extractor that searches for the
+          // closing repeatCol
+          let closingExpr: { col: number; row: number } | undefined = undefined;
+
+          const {
+            blocks: innerBlocks,
+            variables: newVariables,
+            issues: otherIssues,
+          } = extractVarsAndBlocksInternal(
+            sheet,
+            ([cCol, cRow]) => {
+              // stop once we found a closing repeatRow
+              if (closingExpr !== undefined) return null;
+
+              // literally just go down
+              if (cRow + 1 >= rowBound) return null;
+              return [cCol, cRow + 1];
+            },
+            (expr) => {
+              if (
+                expr.type !== "specialCall" ||
+                (expr.code !== "c" &&
+                  expr.identifier !== "repeatCol" &&
+                  !expr.closing)
+              )
+                return;
+
+              const [cCol, cRow] = addr;
+
+              closingExpr = { col: cCol, row: cRow };
+
+              // we got it!
+              return { stop: true };
+            },
+          );
+
+          variables.push(...newVariables);
+          issues.push(...otherIssues);
+
+          if (closingExpr === undefined) {
+            issues.push({
+              message: "closing repeatCol not found",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          if (args.length !== 2) {
+            issues.push({
+              message:
+                "repeatCol must have at least two arguments: number of repeats, and a local index variable identifier",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          const [numRepeats, indexVariableIdent] = args;
+
+          if (typeof numRepeats === "string") {
+            issues.push({
+              message:
+                "repeatCol's first argument must be an expression of number",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          if (typeof indexVariableIdent !== "string") {
+            issues.push({
+              message: "repeatCol's second argument must be an identifier",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
+          blocks.push({
+            identifier: "repeatCol",
+            arg: numRepeats!,
+            indexVariableIdentifier: indexVariableIdent,
+
+            direction: "col",
+            innerBlocks,
+
+            start: { col, row },
+            end: closingExpr,
+          });
+
+          return { deleteExpr: true };
+        }
+
+        return { deleteExpr: true };
+      },
     },
     [0, 0],
-    ([curCol, curRow]) =>
-      curCol >= colBound
-        ? curRow >= rowBound
-          ? null
-          : [0, curRow + 1]
-        : [curCol + 1, curRow],
+    advanceStrategy,
+    beforeVisitExpression,
   );
 
   return { blocks, variables, issues };
