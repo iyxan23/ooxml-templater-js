@@ -9,7 +9,7 @@ import type {
 export interface Expressionish {
   getExpression(): BasicExpressionsWithStaticTexts;
   removeExpression(index: number): void;
-  replaceExpression(expr: BasicExpression): void;
+  replaceExpression(expr: BasicExpression, index: number): void;
 }
 
 export interface Source<Addr, Item extends Expressionish> {
@@ -18,9 +18,8 @@ export interface Source<Addr, Item extends Expressionish> {
 }
 
 type VisitorAction<Item extends Expressionish> =
-  | undefined
   | { replaceItem: Item }
-  | { replaceExpr: BasicExpression }
+  | { replaceExpr: BasicExpression; replaceExprIndex: number }
   | { deleteExpr: true };
 
 export interface Visitor<Addr, Item extends Expressionish> {
@@ -29,21 +28,21 @@ export interface Visitor<Addr, Item extends Expressionish> {
     item: Item,
     expr: Extract<BasicExpression, { type: "specialCall" }>,
     index: number,
-  ): VisitorAction<Item>;
+  ): VisitorAction<Item> | void;
 
   visitCall?(
     addr: Addr,
     item: Item,
     expr: Extract<BasicExpression, { type: "call" }>,
     index: number,
-  ): VisitorAction<Item>;
+  ): VisitorAction<Item> | void;
 
   visitVariableAccess?(
     addr: Addr,
     item: Item,
     expr: Extract<BasicExpression, { type: "variableAccess" }>,
     index: number,
-  ): VisitorAction<Item>;
+  ): VisitorAction<Item> | void;
 }
 
 export function extract<Addr, Item extends Expressionish>(
@@ -64,7 +63,7 @@ export function extract<Addr, Item extends Expressionish>(
       const expr = item.getExpression()[index]!;
       if (typeof expr !== "object") continue;
 
-      let result: VisitorAction<Item>;
+      let result: VisitorAction<Item> | void = undefined;
 
       switch (expr.type) {
         case "call":
@@ -78,14 +77,13 @@ export function extract<Addr, Item extends Expressionish>(
           break;
       }
 
-      if (result === undefined) continue;
+      if (!result) continue;
 
       if ("replaceItem" in result) {
         source.setItem(curAddr, result.replaceItem);
         break;
       } else if ("replaceExpr" in result) {
-        item.replaceExpression(result.replaceExpr);
-        break;
+        item.replaceExpression(result.replaceExpr, result.replaceExprIndex);
       } else if ("deleteExpr" in result) {
         item.removeExpression(index);
       }
