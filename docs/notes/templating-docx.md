@@ -95,9 +95,20 @@ of the `w:tblPr` element, named `w:tblLayout`. An example:
 </w:tblPr>
 ```
 
-`w:type` can either be `autoFit` or `fixed`. Read more on the spec lol.
+`w:type` of `w:tblLayout` can either be `autoFit` or `fixed`. Read more on
+the spec lol.
 
-Here's the copied spec:
+Cells also have a `w:tcPr` element, which has a `w:tcW` element. This element
+influences greatly about how the cell width is calculated.
+
+The `w:tcW` element has a `w:type` attribute, which can be `nil` (no width),
+`pct` (Width in percents of the table width), `dxa` (Width in twentieths of a
+point), or `auto` (autofit).
+
+The cell width is calculated differently depending on the `w:type` attribute,
+and the layout.
+
+Here's the copied spec regarding the algorithm for calculating the cell width:
 
 > This simple type defines the possible types of layout algorithms which can be
 > used to lay out a table within a WordprocessingML document.
@@ -105,7 +116,7 @@ Here's the copied spec:
 > These algorithms are defined in the following paragraphs (noting, of course,
 > that implementations are free to implement more efficient versions of each).
 >
-> Fixed Width Table Layout - This method of table layout uses the preferred
+> **Fixed Width Table Layout** - This method of table layout uses the preferred
 > widths on the table items to generate the final sizing of the table, but does
 > not change that size regardless of the contents of each table cell, hence the
 > table is fixed width.
@@ -168,3 +179,14 @@ Here's the copied spec:
 > 8. Next, override the preferred table width until the table reaches the page
 >    width.
 > 9. Finally, force a line break in each cell's contents as needed end guidance]
+
+### Fixed table
+
+There are quite a lot of nuances and edge cases to consider when dealing with
+fixed tables.
+
+The table demonstrated in the spec is that a cell can span across multiple
+columns by making use of `w:gridSpan`. And rows are able to start at a
+different column than the first one by making use of `w:gridBefore`. The thing
+is that these elements can influence how the cell width is calculated (these
+elements are a part of the `w:tcPr` element)
