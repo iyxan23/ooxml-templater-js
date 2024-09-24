@@ -44,13 +44,6 @@ export interface Visitor<Addr, Item extends Expressionish> {
     expr: Extract<BasicExpression, { type: "variableAccess" }>,
     index: number,
   ): VisitorAction<Item>;
-
-  visitSpread?(
-    addr: Addr,
-    item: Item,
-    expr: Extract<BasicExpression, { type: "spread" }>,
-    index: number,
-  ): VisitorAction<Item>;
 }
 
 export function extract<Addr, Item extends Expressionish>(
@@ -79,9 +72,6 @@ export function extract<Addr, Item extends Expressionish>(
           break;
         case "variableAccess":
           result = visitor.visitVariableAccess?.(curAddr, item, expr, index);
-          break;
-        case "spread":
-          result = visitor.visitSpread?.(curAddr, item, expr, index);
           break;
         case "specialCall":
           result = visitor.visitSpecialCall?.(curAddr, item, expr, index);
