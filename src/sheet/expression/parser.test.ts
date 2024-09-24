@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { parseBasicExpressions, type BasicExpressionsWithStaticTexts } from "./parser";
+import {
+  parseBasicExpressions,
+  type BasicExpressionsWithStaticTexts,
+} from "./parser";
 
 describe("parseExpressionCell", () => {
   it("should parse a very simple call", () => {
@@ -177,11 +180,13 @@ describe("parseExpressionCell", () => {
 
   it("should parse a rather complex expression", () => {
     const input =
-      "[#repeatRow [:transactions length] y] [:transactions [:y] student fullName]";
+      "[r#repeatRow [:transactions length] y] [:transactions [:y] student fullName]";
     const expected: BasicExpressionsWithStaticTexts = [
       {
-        type: "blockStart",
+        type: "specialCall",
+        code: "r",
         identifier: "repeatRow",
+        closing: false,
         args: [
           {
             type: "variableAccess",
@@ -263,57 +268,63 @@ describe("parseExpressionCell", () => {
       "[hoist columns [unique [reduce [:transactions] item acc { [merge [:acc] [:item payment columnName]] } ]]]";
     const expected: BasicExpressionsWithStaticTexts = [
       {
-        type: "variableHoist",
-        identifier: "columns",
-        expression: {
-          type: "call",
-          identifier: "unique",
-          args: [
-            {
-              type: "call",
-              identifier: "reduce",
-              args: [
-                {
-                  type: "variableAccess",
-                  identifier: "transactions",
-                  args: [],
-                },
-                "item",
-                "acc",
-                {
-                  type: "lambda",
-                  expression: {
-                    type: "call",
-                    identifier: "merge",
-                    args: [
-                      {
-                        type: "variableAccess",
-                        identifier: "acc",
-                        args: [],
-                      },
-                      {
-                        type: "variableAccess",
-                        identifier: "item",
-                        args: ["payment", "columnName"],
-                      },
-                    ],
+        type: "call",
+        identifier: "hoist",
+        args: [
+          "columns",
+          {
+            type: "call",
+            identifier: "unique",
+            args: [
+              {
+                type: "call",
+                identifier: "reduce",
+                args: [
+                  {
+                    type: "variableAccess",
+                    identifier: "transactions",
+                    args: [],
                   },
-                },
-              ],
-            },
-          ],
-        },
+                  "item",
+                  "acc",
+                  {
+                    type: "lambda",
+                    expression: {
+                      type: "call",
+                      identifier: "merge",
+                      args: [
+                        {
+                          type: "variableAccess",
+                          identifier: "acc",
+                          args: [],
+                        },
+                        {
+                          type: "variableAccess",
+                          identifier: "item",
+                          args: ["payment", "columnName"],
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       },
     ];
     expect(parseBasicExpressions(input)).toEqual(expected);
   });
 
-  it("should parse a block end expression", () => {
-    const input = "[/#repeatRow]";
+  it("should parse a closing special call expression", () => {
+    const input = "[/r#repeatRow]";
     const expected: BasicExpressionsWithStaticTexts = [
       {
-        type: "blockEnd",
+        type: "specialCall",
+        code: "r",
+        closing: true,
         identifier: "repeatRow",
+        args: [],
       },
     ];
     expect(parseBasicExpressions(input)).toEqual(expected);
