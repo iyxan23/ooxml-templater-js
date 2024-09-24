@@ -105,12 +105,12 @@ export function extractVarsAndBlocks<SheetT>(
   extract<SheetAddr, BasicExpressionsWrapper<SheetT>>(
     source,
     {
-      visitCall(addr, item, expr, _index) {
+      visitCall(addr, _item, expr, _index) {
         if (expr.identifier !== "hoist" && expr.identifier !== "var") return;
 
         // this is a variable hoist
         const [col, row] = addr;
-        const args = item.getExpression();
+        const args = expr.args;
 
         if (args.length !== 2) {
           issues.push({
