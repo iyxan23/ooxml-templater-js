@@ -50,10 +50,11 @@ export function extract<Addr, Item extends Expressionish>(
   visitor: Visitor<Addr, Item>,
   start: Addr,
   advance: (curAddr: Addr) => Addr | null,
+  beforeVisitExpression?: (expr: BasicExpression) => void | { stop: true },
 ) {
   let curAddr: Addr | null = start;
 
-  while (curAddr !== null) {
+  outer: while (curAddr !== null) {
     const item = source.getItem(curAddr);
     if (!item) break;
 
@@ -62,6 +63,9 @@ export function extract<Addr, Item extends Expressionish>(
     for (let index = 0; index < item.getExpression().length; index++) {
       const expr = item.getExpression()[index]!;
       if (typeof expr !== "object") continue;
+
+      const { stop } = beforeVisitExpression?.(expr) ?? { stop: false };
+      if (stop) break outer;
 
       let result: VisitorAction<Item> | void = undefined;
 
