@@ -2,16 +2,13 @@ import {
   type BasicExpressionsWithStaticTexts,
   parseBasicExpressions,
 } from "../expression/parser";
-import { Block, extractHoistsAndBlocks } from "../expression/extractor";
 import { Sheet } from "./sheet";
-import {
-  evaluateExpression,
-  TemplaterFunction,
-} from "../expression/evaluate";
+import { evaluateExpression, TemplaterFunction } from "../expression/evaluate";
 import { Issue } from "src/result";
 import { Result, resultSymbol, success } from "../result";
 import deepmerge from "deepmerge";
 import { builtinFunctions } from "../expression/function/builtin";
+import { Block, extractVarsAndBlocks } from "./sheet-extractor";
 
 export interface TemplatableCell {
   getTextContent(): string;
@@ -91,19 +88,16 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
     const parsedExpressions = this.parseExpressions(this.sheet);
 
     // stage 1: extract hoists and blocks
-    const { variableHoists, blocks } = extractHoistsAndBlocks(
-      parsedExpressions.getBounds(),
-      (col, row) => parsedExpressions.getCell(col, row)?.[0] ?? null,
-      (col, row, data) =>
-        parsedExpressions.setCell(col, row, [
-          data,
-          parsedExpressions.getCell(col, row)?.[1]!,
-        ]),
-    );
+    const {
+      variables,
+      blocks,
+      issues: extractIssues,
+    } = extractVarsAndBlocks(parsedExpressions);
+    issues.push(...extractIssues);
 
     // stage 2: evaluate variable hoists
     const globalVariables: Record<string, any> = {};
-    for (const { col, row, expr } of variableHoists) {
+    for (const { col, row, expr, identifier } of variables) {
       const sheetCell = this.sheet.getCell(col, row);
       if (sheetCell === null) {
         throw new Error(
@@ -112,16 +106,20 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         );
       }
 
-      const result = evaluateExpression(
-        expr.expression,
-        {
-          col,
-          row,
-          callTree: [`hoisted variable \`${expr.identifier}\``],
-        },
-        (funcName) => this.functions[funcName],
-        (variableName) => globalVariables[variableName] ?? data[variableName],
-      );
+      const result =
+        typeof expr === "string"
+          ? success(expr)
+          : evaluateExpression(
+              expr,
+              {
+                col,
+                row,
+                callTree: [`hoisted variable \`${identifier}\``],
+              },
+              (funcName) => this.functions[funcName],
+              (variableName) =>
+                globalVariables[variableName] ?? data[variableName],
+            );
 
       issues.push(...result.issues);
 
@@ -129,7 +127,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         return result;
       }
 
-      globalVariables[expr.identifier] = result.result;
+      globalVariables[identifier] = result.result;
     }
 
     // setup the sheet shift emitter
