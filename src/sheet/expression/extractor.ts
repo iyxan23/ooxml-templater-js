@@ -24,28 +24,28 @@ type VisitorAction<Item extends Expressionish> =
   | { deleteExpr: true };
 
 export interface Visitor<Addr, Item extends Expressionish> {
-  visitSpecialCall(
+  visitSpecialCall?(
     addr: Addr,
     item: Item,
     expr: Extract<BasicExpression, { type: "specialCall" }>,
     index: number,
   ): VisitorAction<Item>;
 
-  visitCall(
+  visitCall?(
     addr: Addr,
     item: Item,
     expr: Extract<BasicExpression, { type: "call" }>,
     index: number,
   ): VisitorAction<Item>;
 
-  visitVariableAccess(
+  visitVariableAccess?(
     addr: Addr,
     item: Item,
     expr: Extract<BasicExpression, { type: "variableAccess" }>,
     index: number,
   ): VisitorAction<Item>;
 
-  visitSpread(
+  visitSpread?(
     addr: Addr,
     item: Item,
     expr: Extract<BasicExpression, { type: "spread" }>,
@@ -75,16 +75,16 @@ export function extract<Addr, Item extends Expressionish>(
 
       switch (expr.type) {
         case "call":
-          result = visitor.visitCall(curAddr, item, expr, index);
+          result = visitor.visitCall?.(curAddr, item, expr, index);
           break;
         case "variableAccess":
-          result = visitor.visitVariableAccess(curAddr, item, expr, index);
+          result = visitor.visitVariableAccess?.(curAddr, item, expr, index);
           break;
         case "spread":
-          result = visitor.visitSpread(curAddr, item, expr, index);
+          result = visitor.visitSpread?.(curAddr, item, expr, index);
           break;
         case "specialCall":
-          result = visitor.visitSpecialCall(curAddr, item, expr, index);
+          result = visitor.visitSpecialCall?.(curAddr, item, expr, index);
           break;
       }
 
