@@ -1,10 +1,10 @@
-import { Expressionish, extract, Source } from "src/expression/extractor";
+import { Expressionish, extract, Source } from "../expression/extractor";
 import {
   BasicExpression,
   BasicExpressionsWithStaticTexts,
-} from "src/expression/parser";
+} from "../expression/parser";
 import { Sheet } from "./sheet";
-import { Issue } from "src/result";
+import { Issue } from "../result";
 
 export type Block = {
   identifier: string;

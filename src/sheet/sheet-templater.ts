@@ -4,8 +4,7 @@ import {
 } from "../expression/parser";
 import { Sheet } from "./sheet";
 import { evaluateExpression, TemplaterFunction } from "../expression/evaluate";
-import { Issue } from "src/result";
-import { Result, resultSymbol, success } from "../result";
+import { Result, resultSymbol, success, Issue } from "../result";
 import deepmerge from "deepmerge";
 import { builtinFunctions } from "../expression/function/builtin";
 import { Block, extractVarsAndBlocks } from "./sheet-extractor";
