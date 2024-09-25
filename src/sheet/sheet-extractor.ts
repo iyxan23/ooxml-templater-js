@@ -8,6 +8,7 @@ import { Issue } from "../result";
 
 export type Block = {
   identifier: string;
+  code: string;
   arg: BasicExpression;
   indexVariableIdentifier: string;
 
@@ -253,6 +254,7 @@ function extractVarsAndBlocksInternal<SheetT>(
 
           blocks.push({
             identifier: "repeatRow",
+            code: "r",
             arg: numRepeats!,
             indexVariableIdentifier: indexVariableIdent,
 
@@ -350,6 +352,7 @@ function extractVarsAndBlocksInternal<SheetT>(
 
           blocks.push({
             identifier: "repeatCol",
+            code: "c",
             arg: numRepeats!,
             indexVariableIdentifier: indexVariableIdent,
 
