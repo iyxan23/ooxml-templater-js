@@ -9,7 +9,7 @@ import { Issue } from "../result";
 export type Block = {
   identifier: string;
   code: string;
-  arg: BasicExpression;
+  arg: BasicExpression | string;
   indexVariableIdentifier: string;
 
   direction: "col" | "row";
@@ -241,17 +241,6 @@ function extractVarsAndBlocksInternal<SheetT>(
 
           const [numRepeats, indexVariableIdent] = args;
 
-          if (typeof numRepeats === "string") {
-            issues.push({
-              message:
-                "repeatRow's first argument must be an expression of number",
-              col,
-              row,
-            });
-
-            return { deleteExpr: true };
-          }
-
           if (typeof indexVariableIdent !== "string") {
             issues.push({
               message: "repeatRow's second argument must be an identifier",
@@ -338,17 +327,6 @@ function extractVarsAndBlocksInternal<SheetT>(
           }
 
           const [numRepeats, indexVariableIdent] = args;
-
-          if (typeof numRepeats === "string") {
-            issues.push({
-              message:
-                "repeatCol's first argument must be an expression of number",
-              col,
-              row,
-            });
-
-            return { deleteExpr: true };
-          }
 
           if (typeof indexVariableIdent !== "string") {
             issues.push({

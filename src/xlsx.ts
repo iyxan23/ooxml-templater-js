@@ -10,6 +10,7 @@ import { Sheet } from "./sheet/sheet";
 import { SheetTemplater, TemplatableCell } from "./sheet/sheet-templater";
 import { TemplaterFunction } from "./expression/evaluate";
 import { Issue } from "./result";
+import { isNumeric } from "./utils";
 
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 
@@ -584,8 +585,4 @@ async function streamToText(
     result += value;
   }
   return result;
-}
-
-function isNumeric(value: string): boolean {
-  return /^-?\d+$/.test(value);
 }
