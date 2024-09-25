@@ -166,13 +166,23 @@ function extractVarsAndBlocksInternal<SheetT>(
       },
 
       visitSpecialCall(addr, _item, expr, _index) {
-        // todo: make this extensible
-        if (expr.code === "r" && expr.identifier === "repeatRow")
-          return { deleteExpr: true };
-        if (expr.code === "c" && expr.identifier === "repeatCol")
-          return { deleteExpr: true };
-
         const [col, row] = addr;
+
+        // todo: make this extensible
+        const available: Record<string, Record<string, boolean>> = {
+          r: { repeatRow: true },
+          c: { repeatCol: true },
+        };
+
+        if (!available[expr.code]?.[expr.identifier]) {
+          issues.push({
+            message: `unknown special call "${expr.code}#${expr.identifier}"`,
+            col,
+            row,
+          });
+          return { deleteExpr: true };
+        }
+
         const args = expr.args;
 
         if (expr.code === "r" && expr.identifier === "repeatRow") {
