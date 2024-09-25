@@ -298,9 +298,22 @@ function extractVarsAndBlocksInternal<SheetT>(
 
           return { deleteExpr: true };
         } else if (expr.code === "c" && expr.identifier === "repeatCol") {
+          if (args.length !== 2) {
+            issues.push({
+              message:
+                "repeatRow must have at least two arguments: number of repeats, and a local index variable identifier",
+              col,
+              row,
+            });
+
+            return { deleteExpr: true };
+          }
+
           // recursively spin up another extractor that searches for the
           // closing repeatCol
           let closingExpr: { col: number; row: number } | undefined = undefined;
+
+          const next: [number, number] = [col, row + 1];
 
           const {
             blocks: innerBlocks,
@@ -308,23 +321,19 @@ function extractVarsAndBlocksInternal<SheetT>(
             issues: otherIssues,
           } = extractVarsAndBlocksInternal(
             sheet,
-            [col, row],
+            next,
             ([cCol, cRow]) => {
               // stop once we found a closing repeatRow
               if (closingExpr !== undefined) return null;
 
               // literally just go down
-              if (cRow + 1 >= rowBound) return null;
+              if (cRow + 1 > rowBound) return null;
               return [cCol, cRow + 1];
             },
-            (expr) => {
-              if (
-                expr.type !== "specialCall" ||
-                (expr.code !== "c" &&
-                  expr.identifier !== "repeatCol" &&
-                  !expr.closing)
-              )
-                return;
+            (expr, addr) => {
+              if (expr.type !== "specialCall") return;
+              if (expr.code !== "c" && expr.identifier !== "repeatCol") return;
+              if (!expr.closing) return;
 
               const [cCol, cRow] = addr;
 
@@ -341,17 +350,6 @@ function extractVarsAndBlocksInternal<SheetT>(
           if (closingExpr === undefined) {
             issues.push({
               message: "closing repeatCol not found",
-              col,
-              row,
-            });
-
-            return { deleteExpr: true };
-          }
-
-          if (args.length !== 2) {
-            issues.push({
-              message:
-                "repeatCol must have at least two arguments: number of repeats, and a local index variable identifier",
               col,
               row,
             });
