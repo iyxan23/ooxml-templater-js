@@ -4,10 +4,11 @@ import {
 } from "../expression/parser";
 import { Sheet } from "./sheet";
 import { evaluateExpression, TemplaterFunction } from "../expression/evaluate";
-import { Result, resultSymbol, success, Issue } from "../result";
+import { Result, resultSymbol, success, Issue, failure } from "../result";
 import deepmerge from "deepmerge";
 import { builtinFunctions } from "../expression/function/builtin";
 import { Block, extractVarsAndBlocks } from "./sheet-extractor";
+import { isNumeric } from "../utils";
 
 export interface TemplatableCell {
   getTextContent(): string;
@@ -233,16 +234,34 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
 
       localVariables = deepmerge(localVariables, result.result);
 
-      const repeatAmountResult = evaluateExpression(
-        block.arg,
-        {
-          col: block.start.col,
-          row: block.start.row,
-          callTree: [`${block.identifier} block`],
-        },
-        (fName) => lookupFunction(fName),
-        (vName) => lookupVariable(vName),
-      );
+      let repeatAmountResult;
+
+      if (typeof block.arg === "string") {
+        if (isNumeric(block.arg)) {
+          const num = parseInt(block.arg);
+          repeatAmountResult = success(num);
+        } else {
+          repeatAmountResult = failure(
+            {
+              message: `invalid repeat block argument "${block.arg}"`,
+              col: block.start.col,
+              row: block.start.row,
+            },
+            issues,
+          );
+        }
+      } else {
+        repeatAmountResult = evaluateExpression(
+          block.arg,
+          {
+            col: block.start.col,
+            row: block.start.row,
+            callTree: [`${block.identifier} block`],
+          },
+          (fName) => lookupFunction(fName),
+          (vName) => lookupVariable(vName),
+        );
+      }
 
       if (repeatAmountResult.status === "failed") {
         return repeatAmountResult;
