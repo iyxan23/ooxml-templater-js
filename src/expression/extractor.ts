@@ -59,45 +59,46 @@ export function extract<Addr, Item extends Expressionish>(
 
   outer: while (curAddr !== null) {
     const item = source.getItem(curAddr);
-    if (!item) break;
 
-    for (let index = 0; index < item.getExpression().length; index++) {
-      const expr = item.getExpression()[index]!;
-      if (typeof expr !== "object") continue;
+    if (item) {
+      for (let index = 0; index < item.getExpression().length; index++) {
+        const expr = item.getExpression()[index]!;
+        if (typeof expr !== "object") continue;
 
-      const { stop, removeExpr } = beforeVisitExpression?.(expr, curAddr) ?? {
-        stop: false,
-        removeExpr: false,
-      };
+        const { stop, removeExpr } = beforeVisitExpression?.(expr, curAddr) ?? {
+          stop: false,
+          removeExpr: false,
+        };
 
-      if (stop) {
-        if (removeExpr) item.removeExpression(index);
-        break outer;
-      }
+        if (stop) {
+          if (removeExpr) item.removeExpression(index);
+          break outer;
+        }
 
-      let result: VisitorAction<Item> | void = undefined;
+        let result: VisitorAction<Item> | void = undefined;
 
-      switch (expr.type) {
-        case "call":
-          result = visitor.visitCall?.(curAddr, item, expr, index);
+        switch (expr.type) {
+          case "call":
+            result = visitor.visitCall?.(curAddr, item, expr, index);
+            break;
+          case "variableAccess":
+            result = visitor.visitVariableAccess?.(curAddr, item, expr, index);
+            break;
+          case "specialCall":
+            result = visitor.visitSpecialCall?.(curAddr, item, expr, index);
+            break;
+        }
+
+        if (!result) continue;
+
+        if ("replaceItem" in result) {
+          source.setItem(curAddr, result.replaceItem);
           break;
-        case "variableAccess":
-          result = visitor.visitVariableAccess?.(curAddr, item, expr, index);
-          break;
-        case "specialCall":
-          result = visitor.visitSpecialCall?.(curAddr, item, expr, index);
-          break;
-      }
-
-      if (!result) continue;
-
-      if ("replaceItem" in result) {
-        source.setItem(curAddr, result.replaceItem);
-        break;
-      } else if ("replaceExpr" in result) {
-        item.replaceExpression(result.replaceExpr, result.replaceExprIndex);
-      } else if ("deleteExpr" in result) {
-        item.removeExpression(index);
+        } else if ("replaceExpr" in result) {
+          item.replaceExpression(result.replaceExpr, result.replaceExprIndex);
+        } else if ("deleteExpr" in result) {
+          item.removeExpression(index);
+        }
       }
     }
 
