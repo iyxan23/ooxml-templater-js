@@ -61,8 +61,6 @@ export function extract<Addr, Item extends Expressionish>(
     const item = source.getItem(curAddr);
     if (!item) break;
 
-    if (item.getExpression().length === 0) break;
-
     for (let index = 0; index < item.getExpression().length; index++) {
       const expr = item.getExpression()[index]!;
       if (typeof expr !== "object") continue;
