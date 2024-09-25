@@ -131,4 +131,87 @@ describe("Sheet Extractor", () => {
     ]);
     expect(variables).toEqual([]);
   });
+
+  it("extracts a nested repeatRow", () => {
+    const sheet = new Sheet<[BasicExpressionsWithStaticTexts, string]>([
+      [
+        cell("[r#repeatRow 2 test]"), // 0
+        cell("this will be repeated"), // 1
+        cell("this will be repeated too"), // 2
+        cell("[r#repeatRow 2 test]"), // 3
+        cell("inner"), // 4
+        cell("[/r#repeatRow]"), // 5
+        cell("[/r#repeatRow]"), // 6
+      ],
+    ]);
+
+    const { blocks, variables, issues } = extractVarsAndBlocks(sheet);
+
+    expect(issues).toEqual([]);
+    expect(blocks).toEqual([
+      {
+        identifier: "repeatRow",
+        arg: "2",
+        indexVariableIdentifier: "test",
+        code: "r",
+        direction: "row",
+        innerBlocks: [
+          {
+            identifier: "repeatRow",
+            arg: "2",
+            indexVariableIdentifier: "test",
+            code: "r",
+            direction: "row",
+            innerBlocks: [],
+            start: { col: 3, row: 0 },
+            end: { col: 5, row: 0 },
+          },
+        ],
+        start: { col: 0, row: 0 },
+        end: { col: 6, row: 0 },
+      },
+    ]);
+    expect(variables).toEqual([]);
+  });
+
+  it("extracts multiple blocks", () => {
+    const sheet = new Sheet<[BasicExpressionsWithStaticTexts, string]>([
+      [cell("1"), cell("2"), cell("3"), cell("[c#repeatCol 2 test]")],
+      [
+        cell("[r#repeatRow 2 test]"), // 0
+        cell("repeatinRow"), // 1
+        cell("repeatingRow"), // 2
+        cell("repeatin a lot[/c#repeatCol]"), // 3
+        cell("[/r#repeatRow]"), // 4
+      ],
+    ]);
+
+    const { blocks, variables, issues } = extractVarsAndBlocks(sheet);
+
+    expect(issues).toEqual([]);
+    expect(blocks).toEqual([
+      {
+        identifier: "repeatCol",
+        arg: "2",
+        indexVariableIdentifier: "test",
+        code: "c",
+        direction: "col",
+        innerBlocks: [],
+        start: { col: 3, row: 0 },
+        end: { col: 3, row: 1 },
+      },
+      {
+        identifier: "repeatRow",
+        arg: "2",
+        indexVariableIdentifier: "test",
+        code: "r",
+        direction: "row",
+        innerBlocks: [],
+        start: { col: 0, row: 1 },
+        end: { col: 4, row: 1 },
+      },
+    ]);
+
+    expect(variables).toEqual([]);
+  });
 });
