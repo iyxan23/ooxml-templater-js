@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { Sheet } from "./sheet";
 import { SheetTemplater, TemplatableCell } from "./sheet-templater";
-import { callLambda, createTemplaterFunction } from "../expression/function/wrapper";
+import {
+  callLambda,
+  createTemplaterFunction,
+} from "../expression/function/wrapper";
 import { createTemplaterNoArgsFunction } from "../expression/function/wrapper";
 import { success } from "../result";
 
@@ -30,7 +33,7 @@ function cell(text: string) {
   return new SimpleCell(text);
 }
 
-describe.skip("SheetTemplater", () => {
+describe("SheetTemplater", () => {
   it("does literally nothing", () => {
     const sheet = new Sheet<TemplatableCell>([
       [cell("hello"), cell("world")],
@@ -254,10 +257,10 @@ describe.skip("SheetTemplater", () => {
     const sheet = new Sheet<TemplatableCell>([
       [cell("No."), cell("Full Name"), cell("Age"), cell("GPA")],
       [
-        cell("[#repeatRow [length [:students]] idx][add [:idx] 1]."),
+        cell("[r#repeatRow [length [:students]] idx][add [:idx] 1]."),
         cell("[:students [:idx] fullName]"),
         cell("[:students [:idx] age]"),
-        cell("[:students [:idx] gpa][/#repeatRow]"),
+        cell("[:students [:idx] gpa][/r#repeatRow]"),
       ],
     ]);
 
@@ -305,6 +308,7 @@ describe.skip("SheetTemplater", () => {
       throw result.error;
     }
 
+    console.log(result.issues.map((o) => JSON.stringify(o)).join("\n"));
     expect(result.issues).toHaveLength(0);
     expect(result.result.sheet.getSheet()).toEqual([
       [cell("No."), cell("Full Name"), cell("Age"), cell("GPA")],
@@ -317,10 +321,10 @@ describe.skip("SheetTemplater", () => {
 
   it("does a repeatCol", () => {
     const sheet = new Sheet<TemplatableCell>([
-      [cell("[#repeatCol [length [:students]] idx][add [:idx] 1].")],
+      [cell("[c#repeatCol [length [:students]] idx][add [:idx] 1].")],
       [cell("[:students [:idx] fullName]")],
       [cell("[:students [:idx] age]")],
-      [cell("[:students [:idx] gpa][/#repeatCol]")],
+      [cell("[:students [:idx] gpa][/c#repeatCol]")],
     ]);
 
     const templater = new SheetTemplater(sheet, {
@@ -392,16 +396,16 @@ describe.skip("SheetTemplater", () => {
         cell("No"),
         cell("Full Name"),
         cell("Class"),
-        cell("[#repeatCol [:grades length] gradeIdx][:grades [:gradeIdx]]"),
+        cell("[c#repeatCol [:grades length] gradeIdx][:grades [:gradeIdx]]"),
       ],
       [
         cell(
-          "[#repeatRow [:students length] studentIdx][add [:studentIdx] 1].",
+          "[r#repeatRow [:students length] studentIdx][add [:studentIdx] 1].",
         ),
         cell("[:students [:studentIdx] fullName]"),
         cell("[:students [:studentIdx] class]"),
         cell(
-          '[ifUndefined [:students [:studentIdx] grades [:grades [:gradeIdx]]] "N/A"][/#repeatCol][/#repeatRow]',
+          '[ifUndefined [:students [:studentIdx] grades [:grades [:gradeIdx]]] "N/A"][/c#repeatCol][/r#repeatRow]',
         ),
       ],
     ]);
