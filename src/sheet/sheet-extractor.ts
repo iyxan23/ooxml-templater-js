@@ -38,6 +38,16 @@ class BasicExpressionsWrapper<SheetT> implements Expressionish {
 
   removeExpression(index: number): void {
     this.exprs.splice(index, 1);
+
+    // check if the items on the left and right are strings, if so, combine
+    // them together
+    const prev = this.exprs[index - 1];
+    const next = this.exprs[index];
+    if (typeof prev === "string" && typeof next === "string") {
+      this.exprs[index - 1] = prev + this.exprs[index];
+      this.exprs.splice(index, 1);
+      return;
+    }
   }
 
   replaceExpression(expr: BasicExpression, index: number): void {
