@@ -1,3 +1,4 @@
+// @internal
 export function parseBasicExpressions(
   input: string,
 ): BasicExpressionsWithStaticTexts {
@@ -181,8 +182,10 @@ export function parseBasicExpressions(
   return result;
 }
 
+// @internal
 export type BasicExpressionsWithStaticTexts = (string | BasicExpression)[];
 
+// @internal
 export type BasicExpression =
   // [r#specialCall]
   | {

@@ -6,12 +6,14 @@ import type {
   BasicExpression,
 } from "./parser";
 
+// @internal
 export interface Expressionish {
   getExpression(): BasicExpressionsWithStaticTexts;
   removeExpression(index: number): void;
   replaceExpression(expr: BasicExpression, index: number): void;
 }
 
+// @internal
 export interface Source<Addr, Item extends Expressionish> {
   getItem(addr: Addr): Item | null;
   setItem(addr: Addr, item: Item): void;
@@ -22,6 +24,7 @@ type VisitorAction<Item extends Expressionish> =
   | { replaceExpr: BasicExpression; replaceExprIndex: number }
   | { deleteExpr: true };
 
+// @internal
 export interface Visitor<Addr, Item extends Expressionish> {
   visitSpecialCall?(
     addr: Addr,
@@ -45,6 +48,7 @@ export interface Visitor<Addr, Item extends Expressionish> {
   ): VisitorAction<Item> | void;
 }
 
+// @internal
 export function extract<Addr, Item extends Expressionish>(
   source: Source<Addr, Item>,
   visitor: Visitor<Addr, Item>,

@@ -1,3 +1,4 @@
+// @internal
 export const docxClosingTags = [
   //"w:p",
   "w:background",

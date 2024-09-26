@@ -1,3 +1,10 @@
+/** ## Sheet Extractor
+ *
+ * "Sheet Extractor" is an API that implements `src/expression/extractor.ts` to
+ * extract variable definitions and blocks which will then be evaluated and
+ * expanded respectively in `./sheet-templater.ts`.
+ */
+
 import { Expressionish, extract, Source } from "../expression/extractor";
 import {
   BasicExpression,
@@ -5,26 +12,6 @@ import {
 } from "../expression/parser";
 import { Sheet } from "./sheet";
 import { Issue } from "../result";
-
-export type Block = {
-  identifier: string;
-  code: string;
-  arg: BasicExpression | string;
-  indexVariableIdentifier: string;
-
-  direction: "col" | "row";
-
-  innerBlocks: Block[];
-
-  start: {
-    col: number;
-    row: number;
-  };
-  end: {
-    col: number;
-    row: number;
-  };
-};
 
 class BasicExpressionsWrapper<SheetT> implements Expressionish {
   constructor(
@@ -80,6 +67,7 @@ class SheetAdapter<SheetT>
   }
 }
 
+// @internal
 export type VariableHoist = {
   identifier: string;
   expr: BasicExpression | string;
@@ -87,6 +75,28 @@ export type VariableHoist = {
   row: number;
 };
 
+// @internal
+export type Block = {
+  identifier: string;
+  code: string;
+  arg: BasicExpression | string;
+  indexVariableIdentifier: string;
+
+  direction: "col" | "row";
+
+  innerBlocks: Block[];
+
+  start: {
+    col: number;
+    row: number;
+  };
+  end: {
+    col: number;
+    row: number;
+  };
+};
+
+// @internal
 export function extractVarsAndBlocks<SheetT>(
   sheet: Sheet<[BasicExpressionsWithStaticTexts, SheetT]>,
 ): {

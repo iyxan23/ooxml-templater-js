@@ -447,6 +447,7 @@ const typeOf = createTemplaterFunction(z.tuple([z.any()]), (a) =>
   success(typeof a),
 );
 
+// @internal
 export const builtinFunctions = {
   array,
   arrayEmpty,

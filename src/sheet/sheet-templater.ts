@@ -1,3 +1,13 @@
+/** ## Sheet Templater
+ *
+ * This is where everything templating-related happens in a sheet.
+ * `src/xlsx/index.ts` makes use of this file to do the actual templating.
+ * It's also supposed to be used for `src/docx/index.ts`'s table element, so I
+ * would say the abstractions are pretty good.
+ *
+ * More is explained in `./sheet.md`
+ */
+
 import {
   type BasicExpressionsWithStaticTexts,
   parseBasicExpressions,
@@ -9,30 +19,32 @@ import { builtinFunctions } from "../expression/function/builtin";
 import { Block, extractVarsAndBlocks } from "./sheet-extractor";
 import { isNumeric } from "../utils";
 
+// @internal
 export interface TemplatableCell {
   getTextContent(): string;
   editTextContent(content: string): ThisType<this>;
   cloneWithTextContent(content: string): ThisType<this>;
 }
 
+// @internal
 export type Indexable2DArray<T> = Record<number, Record<number, T>>;
 
 type SheetShiftListener = (
   shift:
     | {
-        direction: "row";
-        row: number;
-        amount: number;
-        colStart: number;
-        colEnd: number;
-      }
+      direction: "row";
+      row: number;
+      amount: number;
+      colStart: number;
+      colEnd: number;
+    }
     | {
-        direction: "col";
-        col: number;
-        amount: number;
-        rowStart: number;
-        rowEnd: number;
-      },
+      direction: "col";
+      col: number;
+      amount: number;
+      rowStart: number;
+      rowEnd: number;
+    },
 ) => void;
 
 class SheetShiftEmitter {
@@ -51,6 +63,7 @@ class SheetShiftEmitter {
   }
 }
 
+// @internal
 export class SheetTemplater<SheetT extends TemplatableCell> {
   private sheet: Sheet<SheetT>;
 
@@ -101,7 +114,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       if (sheetCell === null) {
         throw new Error(
           `fatal: cannot find the cell referenced by variable hoist on` +
-            ` col ${col} row ${row}`,
+          ` col ${col} row ${row}`,
         );
       }
 
@@ -109,16 +122,16 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         typeof expr === "string"
           ? success(expr)
           : evaluateExpression(
-              expr,
-              {
-                col,
-                row,
-                callTree: [`hoisted variable \`${identifier}\``],
-              },
-              (funcName) => this.functions[funcName],
-              (variableName) =>
-                globalVariables[variableName] ?? data[variableName],
-            );
+            expr,
+            {
+              col,
+              row,
+              callTree: [`hoisted variable \`${identifier}\``],
+            },
+            (funcName) => this.functions[funcName],
+            (variableName) =>
+              globalVariables[variableName] ?? data[variableName],
+          );
 
       issues.push(...result.issues);
 

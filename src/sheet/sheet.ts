@@ -1,3 +1,15 @@
+/** ## Sheet API
+ *
+ * A Sheet is a two-dimensional array of data. It is used to store data in a
+ * tabular format. It's general-purpose and can be used outside of this
+ * project.
+ *
+ * The following Sheet class implements APIs for manipulating a Sheet. Things
+ * such as moving rows and columns, inserting and deleting rows and columns,
+ * and cloning rows and columns.
+ */
+
+// @internal
 export class Sheet<T> {
   // list of rows
   private sheet: (T | null)[][] = [];

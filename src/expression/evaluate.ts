@@ -5,21 +5,26 @@ import { failure, Result, success } from "../result";
 //  - use `failure()` when it is a user error
 //  - use throw new Error() when it is a fatal error from the author itself
 
+// @internal
 export type TemplaterFunctionContext = {
   functionName: string;
   col: number;
   row: number;
   callTree: string[];
 };
+
+// @internal
 export type TemplaterFunction<R> = (
   context: TemplaterFunctionContext,
   ...args: any[]
 ) => Result<R>;
 
+// @internal
 export type LambdaFunction<T> = (
   lookupLocalVariable?: (name: string) => any,
 ) => Result<T>;
 
+// @internal
 export function evaluateExpression(
   item: BasicExpression,
   context: { col: number; row: number; callTree: string[] },

@@ -1,3 +1,23 @@
+/** ## Visitor API
+ *
+ * An API that is originally made to be used as a base for the templating
+ * engine, but ended up being kind of a mess.
+ *
+ * > Planning to use something similar to python's elementtree API instead.
+ * > Which actually exists as a package in npm, but it looks terribly old, and
+ * > I think I should write my own.
+ *
+ * The idea is that you can register visitors for each object type, and they
+ * will be called before and after the object is visited. The visitors can
+ * modify the object, and they can also return a new object to replace the
+ * original one.
+ *
+ * It's also able to return a context object, which will be passed to the next
+ * visitors (that are visiting children of the object where the context was
+ * returned).
+ */
+
+// @internal
 export type Visitors = {
   before: {
     [key: string]: ((
@@ -15,6 +35,7 @@ export type Visitors = {
   };
 };
 
+// @internal
 export async function startVisiting(
   doc: any,
   visitors: Visitors,
