@@ -417,7 +417,7 @@ class XlsxTemplater {
     await startVisiting(parsedSheet, {
       before: {
         mergeCell: [
-          (obj, _ctx) => {
+          (obj) => {
             console.log(obj);
             mergeInfo.push(
               ...(Array.isArray(obj) ? obj : [obj]).map((o) => {
@@ -433,7 +433,7 @@ class XlsxTemplater {
           },
         ],
         col: [
-          (obj, _ctx) => {
+          (obj) => {
             const cols = Array.isArray(obj) ? obj : [obj];
 
             for (const col of cols) {
@@ -452,7 +452,7 @@ class XlsxTemplater {
           },
         ],
         row: [
-          (obj, _ctx) => {
+          (obj) => {
             const rows = Array.isArray(obj) ? obj : [obj];
 
             for (const row of rows) {
@@ -471,7 +471,7 @@ class XlsxTemplater {
           },
         ],
         c: [
-          (obj, _ctx) => {
+          (obj) => {
             const cells = Array.isArray(obj) ? obj : [obj];
 
             for (const cell of cells) {
@@ -499,11 +499,10 @@ class XlsxTemplater {
       before: {},
       after: {
         c: [
-          (obj, ctx) => {
+          (obj) => {
             if (obj["v"]) {
               // a single node
               return {
-                childCtx: ctx,
                 newObj:
                   obj["@_t"] === "s" && isNumeric(obj["v"])
                     ? {
@@ -515,10 +514,9 @@ class XlsxTemplater {
               };
             }
 
-            if (!Array.isArray(obj)) return { childCtx: ctx };
+            if (!Array.isArray(obj)) return {};
 
             return {
-              childCtx: ctx,
               newObj: obj.map((o) =>
                 o["@_t"] === "s" && isNumeric(o["v"])
                   ? {

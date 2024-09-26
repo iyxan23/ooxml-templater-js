@@ -6,19 +6,7 @@ import {
 } from "fast-xml-parser";
 import { BlobReader, BlobWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { docxClosingTags } from "./docx-closing-tags-list";
-import { startVisiting, Visitors } from "./visitor-editor";
-
-const createTemplaterVisitors: (data: any) => Visitors = (data) => ({
-  after: {
-    "w:t": [
-      (doc) => ({
-        newObj: JSON.parse(handleTemplate(JSON.stringify(doc), data)),
-        childCtx: undefined,
-      }),
-    ],
-  },
-  before: {},
-});
+import { startVisiting } from "./visitor-editor";
 
 export async function docxFillTemplate(
   docx: ReadableStream,
@@ -52,7 +40,7 @@ export async function docxFillTemplate(
         preserveOrder: true,
         ignoreAttributes: false,
         parseTagValue: false,
-        trimValues: true,
+        trimValues: false,
         unpairedTags: docxClosingTags,
         suppressUnpairedNode: false,
         suppressEmptyNode: true,
@@ -61,13 +49,10 @@ export async function docxFillTemplate(
       const parser = new XMLParser(options);
       const doc = parser.parse(data);
 
-      const filledDoc = await startVisiting(
-        doc,
-        createTemplaterVisitors(input),
-      );
+      const result = await templateDocument(doc, input);
 
       const builder = new XMLBuilder(options);
-      const newDoc: string = builder.build(filledDoc);
+      const newDoc: string = builder.build(result);
 
       await zipWriter.add(
         entry.filename,
@@ -86,21 +71,110 @@ export async function docxFillTemplate(
   zipWriter.close();
 }
 
-const re = /\${([^}]+)}/g;
+type BodyElement =
+  | {
+    type: "paragraph";
+    obj: any;
+    text: { path: string[]; text: string } | undefined;
+  }
+  | { type: "table"; obj: any }
+  | { type: "other"; obj: any };
 
-function handleTemplate(haystack: string, data: any): string {
-  let match;
-  let result = haystack;
+function rebuildBodyElements(items: BodyElement[]): any[] {
+  // rebuild the elements
+  const newBodyItems = items.map((item) => {
+    if (item.type === "paragraph") {
+      const { text } = item;
+      if (!text) return item.obj;
 
-  console.log("  handling template");
-  while ((match = re.exec(haystack)) != null) {
-    console.log("  match");
-    console.log("  " + match[1]);
+      const { path, text: textValue } = text;
 
-    const val = data[match[1]!] ?? "";
-    result = result.replace(match[0], val);
-    console.log("  replaced with " + val);
+      const t = path.reduce((acc, p) => acc[p], item.obj);
+
+      t["#text"] = textValue;
+
+      return item.obj;
+    } else if (item.type === "table") {
+      return item.obj;
+    } else {
+      return item.obj;
+    }
+  });
+
+  return newBodyItems;
+}
+
+async function collectBodyElements(body: any): Promise<BodyElement[]> {
+  // collect all the elements inside this body
+  const bodyChildren = Array.isArray(body) ? body : [body];
+  const items: BodyElement[] = [];
+
+  for (const item of bodyChildren) {
+    if (item["w:p"]) {
+      // this is a paragraph
+      let curItemText: { path: string[]; text: string } | undefined;
+
+      await startVisiting(item, {
+        before: {
+          "w:t": [
+            (children, path) => {
+              if (!Array.isArray(children)) return;
+              const textIdx = children.findIndex((a) => !!a["#text"]);
+              if (textIdx === -1) return;
+
+              const text = children[textIdx]["#text"];
+              if (typeof text !== "string") return;
+
+              console.log("PATHHHHH");
+              console.log(path);
+
+              curItemText = { text, path: [...path, String(textIdx)] };
+            },
+          ],
+        },
+        after: {},
+      });
+
+      items.push({
+        type: "paragraph",
+        obj: item,
+        text: curItemText,
+      });
+    } else if (item["w:tbl"]) {
+      // this is a table
+      items.push({ type: "table", obj: item });
+    } else {
+      items.push({ type: "other", obj: item });
+    }
   }
 
-  return result;
+  return items;
+}
+
+async function getBody(xml: any): Promise<any | undefined> {
+  let bodyContent;
+
+  await startVisiting(xml, {
+    before: {
+      "w:body": [(children) => (bodyContent = children)],
+    },
+    after: {},
+  });
+
+  return bodyContent;
+}
+
+async function templateDocument(xml: any, input: any): Promise<any> {
+  const body = await getBody(xml);
+  if (!body) return xml;
+
+  const items = await collectBodyElements(body);
+  const newBodyItems = rebuildBodyElements(items);
+
+  return await startVisiting(xml, {
+    before: {},
+    after: {
+      "w:body": [() => ({ newObj: newBodyItems })],
+    },
+  });
 }

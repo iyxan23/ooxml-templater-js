@@ -2,12 +2,14 @@ export type Visitors = {
   before: {
     [key: string]: ((
       doc: any,
+      path: string[],
       parentCtx?: any,
     ) => { newObj?: any; childCtx?: any } | void)[];
   };
   after: {
     [key: string]: ((
       doc: any,
+      path: string[],
       parentCtx?: any,
     ) => { newObj?: any; childCtx?: any } | void)[];
   };
@@ -35,7 +37,7 @@ function visitObject(
     console.log("  str: " + JSON.stringify(obj));
 
     for (const visitor of visitors.before[key]) {
-      const result = visitor(theObj, thisCtx);
+      const result = visitor(theObj, [...path], thisCtx);
 
       if (result) {
         if (result.newObj) {
@@ -64,7 +66,7 @@ function visitObject(
     console.log("  str: " + JSON.stringify(obj));
 
     for (const visitor of visitors.after[key]) {
-      const result = visitor(theObj, thisCtx);
+      const result = visitor(theObj, [...path], thisCtx);
 
       if (result) {
         if (result.newObj) {
