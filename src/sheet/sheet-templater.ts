@@ -5,7 +5,6 @@ import {
 import { Sheet } from "./sheet";
 import { evaluateExpression, TemplaterFunction } from "../expression/evaluate";
 import { Result, resultSymbol, success, Issue, failure } from "../result";
-import deepmerge from "deepmerge";
 import { builtinFunctions } from "../expression/function/builtin";
 import { Block, extractVarsAndBlocks } from "./sheet-extractor";
 import { isNumeric } from "../utils";
@@ -204,7 +203,8 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       } else if (!localVariables[row][col]) {
         localVariables[row][col] = variables;
       } else {
-        localVariables[row][col] = deepmerge(
+        localVariables[row][col] = Object.assign(
+          {},
           localVariables[row][col],
           variables,
         );
@@ -232,7 +232,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       if (result.status === "failed") return result;
       issues.push(...result.issues);
 
-      localVariables = deepmerge(localVariables, result.result);
+      localVariables = Object.assign({}, localVariables, result.result);
 
       let repeatAmountResult;
 
