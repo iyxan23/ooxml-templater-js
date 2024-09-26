@@ -5,12 +5,12 @@ import {
   XmlBuilderOptions,
   XMLParser,
 } from "fast-xml-parser";
-import { startVisiting } from "./visitor-editor";
-import { Sheet } from "./sheet/sheet";
-import { SheetTemplater, TemplatableCell } from "./sheet/sheet-templater";
-import { TemplaterFunction } from "./expression/evaluate";
-import { Issue } from "./result";
-import { isNumeric } from "./utils";
+import { startVisiting } from "../visitor-editor";
+import { Sheet } from "../sheet/sheet";
+import { SheetTemplater, TemplatableCell } from "../sheet/sheet-templater";
+import { TemplaterFunction } from "../expression/evaluate";
+import { Issue } from "../result";
+import { isNumeric } from "../utils";
 
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 

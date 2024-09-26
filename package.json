@@ -14,16 +14,16 @@
   "exports": {
     "./package.json": "./package.json",
     "./xlsx": {
-      "require": "./dist/xlsx.js",
-      "types": "./dist/xlsx.d.ts",
-      "import": "./dist/xlsx.mjs",
-      "default": "./dist/xlsx.mjs"
+      "require": "./dist/xlsx/index.js",
+      "types": "./dist/xlsx/index.d.ts",
+      "import": "./dist/xlsx/index.mjs",
+      "default": "./dist/xlsx/index.mjs"
     },
     "./docx": {
-      "require": "./dist/docx.js",
-      "types": "./dist/docx.d.ts",
-      "import": "./dist/docx.mjs",
-      "default": "./dist/docx.mjs"
+      "require": "./dist/docx/index.js",
+      "types": "./dist/docx/index.d.ts",
+      "import": "./dist/docx/index.mjs",
+      "default": "./dist/docx/index.mjs"
     }
   },
   "repository": {

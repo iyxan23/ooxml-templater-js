@@ -6,7 +6,7 @@ import {
 } from "fast-xml-parser";
 import { BlobReader, BlobWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { docxClosingTags } from "./docx-closing-tags-list";
-import { startVisiting } from "./visitor-editor";
+import { startVisiting } from "../visitor-editor";
 
 export async function docxFillTemplate(
   docx: ReadableStream,
@@ -169,12 +169,18 @@ async function templateDocument(xml: any, input: any): Promise<any> {
   if (!body) return xml;
 
   const items = await collectBodyElements(body);
-  const newBodyItems = rebuildBodyElements(items);
+  const templatedItems = performTemplating(items, input);
+  const newBodyItems = rebuildBodyElements(templatedItems);
 
-  return await startVisiting(xml, {
+  return startVisiting(xml, {
     before: {},
     after: {
       "w:body": [() => ({ newObj: newBodyItems })],
     },
   });
+}
+
+function performTemplating(items: BodyElement[], input: any): BodyElement[] {
+  console.log(JSON.stringify(input, null, 2));
+  return items;
 }
