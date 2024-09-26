@@ -1,6 +1,6 @@
-# "Programming Language"?
+# Templating Syntax
 
-This is a "programming language" that I have developed to make the templating
+This is a templating syntax that I have developed to make the templating
 process much more flexible, and easier to be customized.
 
 It's inspired and modeled from how functional programming languages work.
@@ -14,6 +14,11 @@ y = f(x)
 With enough functions (and the ability to define your own functions),
 templating sheets will be much easier and deterministic. If you give it the
 same input data, it will always return the same output.
+
+It's also important to know that this templating syntax will be used across
+multiple file formats. They will still retain the same syntax and behavior,
+except for **special calls**, which will be drastically different across
+different file formats.
 
 ## Expressions
 
@@ -122,13 +127,7 @@ The experssion above will be interpreted as:
 
 ### Types of expressions
 
-There are essentially 5 different types of expressions:
-
-- Variable definitions
-
-  ```
-  [hoist hello "whats up?"]
-  ```
+There are essentially 4 different types of expressions:
 
 - Variable access
 
@@ -148,10 +147,10 @@ There are essentially 5 different types of expressions:
   { [add 5 10] }
   ```
 
-- Blocks
+- Special Calls
 
   ```
-  [#repeatRow 5 idx] ... [/#repeatRow]
+  [r#repeatRow 5 idx] ... [/r#repeatRow]
   ```
 
 Let's take a look at how they work!
@@ -226,45 +225,6 @@ And it will get the 6th item of the `students` variable array, and take its
 ```javascript
 students[add(1, 5)].fullName;
 ```
-
-## Variable definition
-
-Variable definition is an expression that starts with `hoist`, followed by
-the variable name and the value as an expression:
-
-```
-[hoist name iyxan]
-```
-
-You can then reference the variable `name` accross the whole sheet:
-
-```
-Hello, [:name]!
-```
-
-Every variable definitions are evaluated before the entire expression sheet is
-evaluated, so you can place `[hoist ..]` expressions anywhere in your sheet,
-and be able to reference it even before it:
-
-```
-Hello, [:name]!
-------------------
-[hoist name iyxan]
-```
-
-> [!NOTE]
-> Why is it named `hoist`?
->
-> Well I was inspired by how the javascript `var` keyword works. People often
-> call them as "hoisting", because during execution, it declares the variable
-> in the global scope, and will then be defined when that statement is ran.
->
-> This reflects exactly how I wanted the variable definition to work in this
-> language. It is "hoisted", and evaluated at an earlier stage before all the
-> expressions in the sheet (and blocks) be evaluated.
->
-> I'm planning to make an alias `var` to make it easier to understand.
-
 ## Function calls
 
 Function calls are an expression that starts with `[`, followed by the
@@ -308,7 +268,7 @@ void xlsxFillTemplate(file.stream(), output, {
 > better define them yet.
 
 I will be writing on another doc about how to define your own functions. And,
-as a fun fact, [here is the code](https://github.com/iyxan/ooxml-templater/blob/main/src/sheet/functions.ts)
+as a fun fact, [here is the code](https://github.com/iyxan/ooxml-templater/blob/main/src/expression/function/builtin.ts)
 that defines every built-in functions that can be used right away in this
 language. You can clone, modify the functions there, and make your own build
 of `ooxml-templater-js` to use them as a built-in function.
@@ -386,17 +346,81 @@ local variable name will be. But it is good practice to make the local variable
 be named as how the user wished, as to not clash with any existing global
 variables / input object keys.
 
-## Blocks
+## Special Calls
 
-Blocks are an expression that starts with `[#...`, followed by the name of the
-block, then ended with an expression that starts with `[/#...`. Using blocks is
-a method of grouping certain cells to do certain things with them.
+Special calls are expressions that has a special character `#` which splits
+a call function identifier into two parts: code and the identifier itself.
 
-Currently, there are only `repeatRow` and `repeatCol` blocks that clones a row
-or a column multiple times according to a `count` argument. They are currently
-uncustomizable, but I have an intention to make it customizable in the future.
+```
+  #
+  |          --- arguments
+[r#repeatRow ...]
+ | ---------
+ |  L identifier
+ |
+ L code
+```
 
-### `repeatRow`
+It also has a closing variant that is indicated by the character `/` at the
+start of the identifier (given that the special call supports it):
+
+```
+[/r#repeatRow]
+```
+
+Special calls are simply labels. They are not evaluated by the engine, but they
+are used to define what the caller should do before every expressions are
+evaluated. e.g. in xlsx, we have special calls named `r#repeatRow` and
+`c#repeatCol` that are used to define how the row and column should be cloned
+and repeated.
+
+This process is what I call as "extraction", as it "extracts" information about
+special calls from a "source", then collects them together, to be interpreted
+or used by the caller.
+
+On the previous case, the xlsx API collects `r#repeatRow` and `c#repeatCol`
+(and variable definitions) special calls, which are then evaluated right (and
+duplicated) before the whole sheet is evaluated.
+
+### The code
+
+The code of a special call defines how a special call is processed, they are
+implemented differently across different callers (xlsx and docx). It also
+doesn't have to be one character long, it can be multiple characters long. But
+for the sake of brevity, it's recommended to keep it to one character.
+
+#### The code `r` and `c`
+
+For example, the code `r` in xlsx is used to define a special call that will
+process a block of row. Which explains why `repeatRow` will fall under this
+code. The `repeatRow` special call uses the code `r` so that it is able to
+process a block of row, from column X to column Y. This also works the same way
+for `c` in xlsx.
+
+I have a plan to make another special call that allows for looping over an
+array instead of repeating for a number of times. Perhaps the name would be
+`forEachRow`, which will also fall under the code `r`: `[r#forEachRow ...]`.
+
+#### The code `g`
+
+The code `g` is used to define a special call that does not use a closing
+special call. The character `g` came from the word "global".
+
+One special call that falls under this code is the `var` special call. It is
+used to define a variable that can be used in the rest of the sheet, which is
+why it falls under the code `g` (global).
+
+Here is an example of a `var` block:
+
+```
+[g#var name "iyxan"]
+```
+
+### xlsx-specific special calls
+
+Here are some special calls that are specific to xlsx:
+
+#### `repeatRow`
 
 Here is an example of a `repeatRow` block:
 
@@ -435,7 +459,7 @@ local variable on each row that where you can know the index of that row.
 The `repeatCol` block also does the same thing, the obvious difference is that
 it repeats columns rather than rows.
 
-### `repeatCol`
+#### `repeatCol`
 
 Here is an example of a `repeatCol` block:
 
@@ -465,7 +489,7 @@ And finally evaluated to be:
 
 ### Mixing multiple blocks
 
-For more complex use cases, it is also possible to combine these two blocks
+For more complex use cases, it is also possible to combine special calls
 together in an intersection, or be nested in a union.
 
 ## Trying it out

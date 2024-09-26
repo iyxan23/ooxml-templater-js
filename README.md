@@ -19,7 +19,7 @@ functional programming, making it deterministic, robust, and extremely
 composable. It's also possible to define your own functions, for extra
 customizability.
 
-[Read more about the sheet templating language here.](./docs/sheet-how-to.md)
+[Read more about the custom templating syntax here.](./docs/template-syntax.md)
 
 ## Getting Started
 

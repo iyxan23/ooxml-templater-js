@@ -1,3 +1,5 @@
+> Status: DONE :)
+
 ## DRY-ing the expression code
 
 Currently the sole purpose of the custom templating syntax is only for

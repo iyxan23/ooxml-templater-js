@@ -59,12 +59,12 @@ Despite the name `ooxml`, I have not yet considered adding support for `.pptx`
 files, as I don't need that yet. But here is the feature matrix (and plans) for
 this library:
 
-| file      | feature                                                         | is it done?           |
-| ------    | ----                                                            | ----                  |
-| 🟩 `xlsx` | [a freaking functional programming language](./sheet-how-to.md) | ✅ 🔥🔥🔥🔥🔥              |
-| 🟦 `docx` | really basic templating                                         | ✅ ofc lol            |
-| 🟦 `docx` | templating tables like sheets                                   | 🤔 thinking of adding |
-| 🟧 `pptx` | -                                                               | 🙅 i dont need it     |
+| file      | feature                                                     | is it done?           |
+| ------    | ----                                                        | ----                  |
+| 🟩 `xlsx` | [a freaking custom templating syntax](./template-syntax.md) | ✅ 🔥🔥🔥🔥🔥              |
+| 🟦 `docx` | really basic templating                                     | ✅ ofc lol            |
+| 🟦 `docx` | templating tables like sheets                               | 🤔 thinking of adding |
+| 🟧 `pptx` | -                                                           | 🙅 i dont need it     |
 
 ### bro i need code!
 
@@ -188,4 +188,4 @@ That's it..
 
 But you can get REALLY complex with the sheet functional language I made.
 Like, working with arrays, or array of arrays, or array of objects, or arrays
-of snacks, oops I'll be discussing it on a different file [here](./sheet-how-to.md).
+of snacks, oops I'll be discussing it on a different file [here](./template-syntax.md).
