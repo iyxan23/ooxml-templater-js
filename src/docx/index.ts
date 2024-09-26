@@ -7,6 +7,9 @@ import {
 import { BlobReader, BlobWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { docxClosingTags } from "./docx-closing-tags-list";
 import { startVisiting } from "../visitor-editor";
+import { collectBodyElements, rebuildBodyElements } from "./doc-elements";
+import { performTemplating } from "./doc-templater";
+import { Result, success } from "../result";
 
 export async function docxFillTemplate(
   docx: ReadableStream,
@@ -71,86 +74,6 @@ export async function docxFillTemplate(
   zipWriter.close();
 }
 
-type BodyElement =
-  | {
-    type: "paragraph";
-    obj: any;
-    text: { path: string[]; text: string } | undefined;
-  }
-  | { type: "table"; obj: any }
-  | { type: "other"; obj: any };
-
-function rebuildBodyElements(items: BodyElement[]): any[] {
-  // rebuild the elements
-  const newBodyItems = items.map((item) => {
-    if (item.type === "paragraph") {
-      const { text } = item;
-      if (!text) return item.obj;
-
-      const { path, text: textValue } = text;
-
-      const t = path.reduce((acc, p) => acc[p], item.obj);
-
-      t["#text"] = textValue;
-
-      return item.obj;
-    } else if (item.type === "table") {
-      return item.obj;
-    } else {
-      return item.obj;
-    }
-  });
-
-  return newBodyItems;
-}
-
-async function collectBodyElements(body: any): Promise<BodyElement[]> {
-  // collect all the elements inside this body
-  const bodyChildren = Array.isArray(body) ? body : [body];
-  const items: BodyElement[] = [];
-
-  for (const item of bodyChildren) {
-    if (item["w:p"]) {
-      // this is a paragraph
-      let curItemText: { path: string[]; text: string } | undefined;
-
-      await startVisiting(item, {
-        before: {
-          "w:t": [
-            (children, path) => {
-              if (!Array.isArray(children)) return;
-              const textIdx = children.findIndex((a) => !!a["#text"]);
-              if (textIdx === -1) return;
-
-              const text = children[textIdx]["#text"];
-              if (typeof text !== "string") return;
-
-              console.log("PATHHHHH");
-              console.log(path);
-
-              curItemText = { text, path: [...path, String(textIdx)] };
-            },
-          ],
-        },
-        after: {},
-      });
-
-      items.push({
-        type: "paragraph",
-        obj: item,
-        text: curItemText,
-      });
-    } else if (item["w:tbl"]) {
-      // this is a table
-      items.push({ type: "table", obj: item });
-    } else {
-      items.push({ type: "other", obj: item });
-    }
-  }
-
-  return items;
-}
-
 async function getBody(xml: any): Promise<any | undefined> {
   let bodyContent;
 
@@ -164,23 +87,24 @@ async function getBody(xml: any): Promise<any | undefined> {
   return bodyContent;
 }
 
-async function templateDocument(xml: any, input: any): Promise<any> {
+async function templateDocument(xml: any, input: any): Promise<Result<any>> {
   const body = await getBody(xml);
   if (!body) return xml;
 
   const items = await collectBodyElements(body);
   const templatedItems = performTemplating(items, input);
-  const newBodyItems = rebuildBodyElements(templatedItems);
 
-  return startVisiting(xml, {
-    before: {},
-    after: {
-      "w:body": [() => ({ newObj: newBodyItems })],
-    },
-  });
-}
+  if (templatedItems.status === "failed") return templatedItems;
 
-function performTemplating(items: BodyElement[], input: any): BodyElement[] {
-  console.log(JSON.stringify(input, null, 2));
-  return items;
+  const newBodyItems = rebuildBodyElements(templatedItems.result);
+
+  return success(
+    await startVisiting(xml, {
+      before: {},
+      after: {
+        "w:body": [() => ({ newObj: newBodyItems })],
+      },
+    }),
+    templatedItems.issues
+  );
 }
