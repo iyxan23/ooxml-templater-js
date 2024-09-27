@@ -36,7 +36,7 @@ export function rebuildBodyElements(items: BodyElement[]): any[] {
 }
 
 // @internal
-export async function collectBodyElements(body: any): Promise<BodyElement[]> {
+export function collectBodyElements(body: any): BodyElement[] {
   // collect all the elements inside this body
   const bodyChildren = Array.isArray(body) ? body : [body];
   const items: BodyElement[] = [];
@@ -46,7 +46,7 @@ export async function collectBodyElements(body: any): Promise<BodyElement[]> {
       // this is a paragraph
       let curItemText: { path: string[]; text: string } | undefined;
 
-      await startVisiting(item, {
+      startVisiting(item, {
         before: {
           "w:t": [
             (children, path) => {

@@ -52,7 +52,7 @@ export async function docxFillTemplate(
       const parser = new XMLParser(options);
       const doc = parser.parse(data);
 
-      const result = await templateDocument(doc, input);
+      const result = templateDocument(doc, input);
 
       const builder = new XMLBuilder(options);
       const newDoc: string = builder.build(result);
@@ -74,10 +74,10 @@ export async function docxFillTemplate(
   zipWriter.close();
 }
 
-async function getBody(xml: any): Promise<any | undefined> {
+function getBody(xml: any): any | undefined {
   let bodyContent;
 
-  await startVisiting(xml, {
+  startVisiting(xml, {
     before: {
       "w:body": [(children) => (bodyContent = children)],
     },
@@ -87,11 +87,11 @@ async function getBody(xml: any): Promise<any | undefined> {
   return bodyContent;
 }
 
-async function templateDocument(xml: any, input: any): Promise<Result<any, DocAddr>> {
-  const body = await getBody(xml);
+function templateDocument(xml: any, input: any): Result<any, DocAddr> {
+  const body = getBody(xml);
   if (!body) return xml;
 
-  const items = await collectBodyElements(body);
+  const items = collectBodyElements(body);
   const templatedItems = performDocumentTemplating(items, input);
 
   if (templatedItems.status === "failed") return templatedItems;
@@ -99,7 +99,7 @@ async function templateDocument(xml: any, input: any): Promise<Result<any, DocAd
   const newBodyItems = rebuildBodyElements(templatedItems.result);
 
   return success(
-    await startVisiting(xml, {
+    startVisiting(xml, {
       before: {},
       after: {
         "w:body": [() => ({ newObj: newBodyItems })],

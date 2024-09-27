@@ -36,7 +36,7 @@ export type Visitors = {
 };
 
 // @internal
-export async function startVisiting(
+export function startVisiting(
   doc: any,
   visitors: Visitors,
 ): Promise<any> {

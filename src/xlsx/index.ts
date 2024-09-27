@@ -66,7 +66,7 @@ export async function xlsxFillTemplate(
       continue;
     }
 
-    const result = await templater.template(
+    const result = templater.template(
       await streamToText(contentStream.readable),
       input,
     );
@@ -170,15 +170,13 @@ class XlsxTemplater {
     console.log(this.sharedStrings);
   }
 
-  async template(
+  template(
     templateContent: string,
     data: any,
-  ): Promise<
-    { xml: string; issues: Issue<SheetAddr>[] } & (
-      | { error: true; cause: Issue<SheetAddr> }
-      | { error: false }
-    )
-  > {
+  ): { xml: string; issues: Issue<SheetAddr>[] } & (
+    | { error: true; cause: Issue<SheetAddr> }
+    | { error: false }
+  ) {
     const options: X2jOptions & XmlBuilderOptions = {
       ignoreAttributes: false,
       parseTagValue: false,
@@ -193,11 +191,11 @@ class XlsxTemplater {
     const parsed = parser.parse(templateContent);
 
     console.log(JSON.stringify(parsed));
-    const sheetFilled = await this.fillSheetWithSharedStrings(parsed);
+    const sheetFilled = this.fillSheetWithSharedStrings(parsed);
     console.log(JSON.stringify(sheetFilled));
 
     // then we turn this sheet into a Sheet object so we can work with it easier
-    const extractedData = await this.extract(sheetFilled);
+    const extractedData = this.extract(sheetFilled);
 
     const rowInfo = extractedData.rowInfo;
     const colInfo = extractedData.colInfo;
@@ -339,7 +337,7 @@ class XlsxTemplater {
       rows[r] = { ...rowInfo[r], c: row.length === 1 ? row[0] : row };
     }
 
-    await startVisiting(xlsxData, {
+    startVisiting(xlsxData, {
       before: {},
       after: {
         dimension: [
@@ -401,7 +399,7 @@ class XlsxTemplater {
     return xlsxData;
   }
 
-  async extract(parsedSheet: any): Promise<{
+  extract(parsedSheet: any): {
     sheet: Sheet<XlsxCell>;
     rowInfo: Record<number, any>;
     colInfo: (any & { min: number; max: number })[];
@@ -409,7 +407,7 @@ class XlsxTemplater {
       start: { col: number; row: number };
       end: { col: number; row: number };
     }[];
-  }> {
+  } {
     const sheet = new Sheet<XlsxCell>();
     const rowInfo: Record<number, any> = {};
     const colInfo: (any & { min: number; max: number })[] = [];
@@ -418,7 +416,7 @@ class XlsxTemplater {
       end: { col: number; row: number };
     }[] = [];
 
-    await startVisiting(parsedSheet, {
+    startVisiting(parsedSheet, {
       before: {
         mergeCell: [
           (obj) => {
@@ -498,8 +496,8 @@ class XlsxTemplater {
     };
   }
 
-  async fillSheetWithSharedStrings(parsedSheet: any): Promise<any> {
-    return await startVisiting(parsedSheet, {
+  fillSheetWithSharedStrings(parsedSheet: any): Promise<any> {
+    return startVisiting(parsedSheet, {
       before: {},
       after: {
         c: [
@@ -510,10 +508,10 @@ class XlsxTemplater {
                 newObj:
                   obj["@_t"] === "s" && isNumeric(obj["v"])
                     ? {
-                      ...obj,
-                      v: this.sharedStrings[parseInt(obj["v"])],
-                      "@_t": "str",
-                    }
+                        ...obj,
+                        v: this.sharedStrings[parseInt(obj["v"])],
+                        "@_t": "str",
+                      }
                     : { ...obj },
               };
             }
@@ -524,10 +522,10 @@ class XlsxTemplater {
               newObj: obj.map((o) =>
                 o["@_t"] === "s" && isNumeric(o["v"])
                   ? {
-                    ...o,
-                    v: this.sharedStrings[parseInt(o["v"])],
-                    "@_t": "str",
-                  }
+                      ...o,
+                      v: this.sharedStrings[parseInt(o["v"])],
+                      "@_t": "str",
+                    }
                   : { ...o },
               ),
             };
