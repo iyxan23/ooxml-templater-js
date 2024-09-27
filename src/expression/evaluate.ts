@@ -6,31 +6,32 @@ import { failure, Result, success } from "../result";
 //  - use throw new Error() when it is a fatal error from the author itself
 
 // @internal
-export type TemplaterFunctionContext = {
+export type TemplaterFunctionContext<Addr> = {
   functionName: string;
-  col: number;
-  row: number;
+  addr: Addr;
   callTree: string[];
 };
 
 // @internal
-export type TemplaterFunction<R> = (
-  context: TemplaterFunctionContext,
+export type TemplaterFunction<ReturnType, Addr> = (
+  context: TemplaterFunctionContext<Addr>,
   ...args: any[]
-) => Result<R>;
+) => Result<ReturnType, Addr>;
 
 // @internal
-export type LambdaFunction<T> = (
+export type LambdaFunction<T, Addr> = (
   lookupLocalVariable?: (name: string) => any,
-) => Result<T>;
+) => Result<T, Addr>;
 
 // @internal
-export function evaluateExpression(
+export function evaluateExpression<Addr>(
   item: BasicExpression,
-  context: { col: number; row: number; callTree: string[] },
-  lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
+  context: { addr: Addr; callTree: string[] },
+  lookupFunction: (
+    funcName: string,
+  ) => TemplaterFunction<any, Addr> | undefined,
   lookupVariable: (name: string) => any | undefined,
-): Result<any | undefined> {
+): Result<any | undefined, Addr> {
   const result = evaluateExpressionInternal(
     item,
     context,
@@ -52,22 +53,21 @@ export function evaluateExpression(
 
 type CanBeSpread<T> = { spread: boolean; data: T };
 
-function evaluateExpressionInternal(
+function evaluateExpressionInternal<Addr>(
   item: BasicExpression,
-  context: { col: number; row: number; callTree: string[] },
-  lookupFunction: (funcName: string) => TemplaterFunction<any> | undefined,
+  context: { addr: Addr; callTree: string[] },
+  lookupFunction: (funcName: string) => TemplaterFunction<any, Addr> | undefined,
   lookupVariable: (name: string) => any | undefined,
-): Result<CanBeSpread<any | undefined>> {
+): Result<CanBeSpread<any | undefined>, Addr> {
   if (item.type == "specialCall") {
     console.warn(
-      `at col ${context.col} ${context.row}, special call is not supposed` +
-        ` to be in the evaluation stage.`,
+      `at addr ${context.addr}, special call is not supposed` +
+      ` to be in the evaluation stage.`,
     );
 
     return success({ spread: false, data: undefined }, [
       {
-        col: context.col,
-        row: context.row,
+        addr: context.addr,
         message:
           `expressions of type specialCall is not supposed to be` +
           ` in the evaluation stage.`,
@@ -100,7 +100,7 @@ function evaluateExpressionInternal(
     // the return type is of type Issue<any>, which could be a "failed" (known
     // from `.status`) execution, due to the nature of interpreted languages.
     // there could also be issues that can be seen from `.status`.
-    return success<CanBeSpread<LambdaFunction<any>>>({
+    return success<CanBeSpread<LambdaFunction<any, Addr>>, Addr>({
       spread: false,
       data: (lookupLocalVariable?: (name: string) => any) => {
         const result = evaluateExpressionInternal(
@@ -123,8 +123,7 @@ function evaluateExpressionInternal(
         if (spread) {
           return failure(
             {
-              col: context.col,
-              row: context.row,
+              addr: context.addr,
               message: "spread is not supposed to be used in a lambda",
             },
             result.issues,
@@ -183,8 +182,7 @@ function evaluateExpressionInternal(
         // return an error!
         return failure(
           {
-            col: context.col,
-            row: context.row,
+            addr: context.addr,
             message: `when calling function \`${item.identifier}\`: [${item.identifier} ${funcArgs.map(() => "--").join(" ")} ???], argument ??? is being spread "..." but it's not iterable`,
           },
           [...issues],
@@ -198,8 +196,7 @@ function evaluateExpressionInternal(
       return success({ spread: false, data: undefined }, [
         ...issues,
         {
-          col: context.col,
-          row: context.row,
+          addr: context.addr,
           message: `function \`${item.identifier}\` is not defined.`,
         },
       ]);
@@ -226,8 +223,7 @@ function evaluateExpressionInternal(
   if (variable === undefined) {
     return success({ spread: false, data: undefined }, [
       {
-        col: context.col,
-        row: context.row,
+        addr: context.addr,
         message: `variable \`${item.identifier}\` is not defined.`,
       },
     ]);
@@ -280,8 +276,7 @@ function evaluateExpressionInternal(
       // return an error!
       return failure(
         {
-          col: context.col,
-          row: context.row,
+          addr: context.addr,
           message: `when indexing the variable \`${item.identifier}\`: [:${item.identifier} ${indexes.join(" ")} ???], the ??? is being spread "..." but it's not iterable`,
         },
         [...issues],
@@ -296,8 +291,7 @@ function evaluateExpressionInternal(
       return success({ spread: false, data: undefined }, [
         ...issues,
         {
-          col: context.col,
-          row: context.row,
+          addr: context.addr,
           message: `variable indexed [:${item.identifier} ${indexes.join(" ")} ???], the ??? is not defined.`,
         },
       ]);

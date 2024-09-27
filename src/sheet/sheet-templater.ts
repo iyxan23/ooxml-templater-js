@@ -15,7 +15,10 @@ import {
 import { Sheet } from "./sheet";
 import { evaluateExpression, TemplaterFunction } from "../expression/evaluate";
 import { Result, resultSymbol, success, Issue, failure } from "../result";
-import { builtinFunctions } from "../expression/function/builtin";
+import {
+  builtinFunctions,
+  getBuiltinFunctions,
+} from "../expression/function/builtin";
 import { Block, extractVarsAndBlocks } from "./sheet-extractor";
 import { isNumeric } from "../utils";
 
@@ -70,8 +73,8 @@ class SheetShiftEmitter {
 export class SheetTemplater<SheetT extends TemplatableCell> {
   private sheet: Sheet<SheetT>;
 
-  private functions: Record<string, TemplaterFunction<any>> = {
-    ...builtinFunctions,
+  private functions: Record<string, TemplaterFunction<any, SheetAddr>> = {
+    ...getBuiltinFunctions<SheetAddr>(),
   };
 
   constructor(
@@ -79,7 +82,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
     {
       functions,
     }: {
-      functions?: Record<string, TemplaterFunction<any>>;
+      functions?: Record<string, TemplaterFunction<any, SheetAddr>>;
     },
   ) {
     this.sheet = sheet;
@@ -126,12 +129,14 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
 
       const result =
         typeof expr === "string"
-          ? success(expr)
-          : evaluateExpression(
+          ? success<string, SheetAddr>(expr)
+          : evaluateExpression<SheetAddr>(
             expr,
             {
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
               callTree: [`hoisted variable \`${identifier}\``],
             },
             (funcName) => this.functions[funcName],
@@ -180,7 +185,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         const [exprCell, sheetCell] = cell;
 
         const result = this.evaluateExpressionCell(exprCell, sheetCell, {
-          context: { col, row },
+          context: { addr: { col, row } },
           lookupVariable: (name) =>
             localVariables[row]?.[col]?.[name] ??
             globalVariables[name] ??
@@ -205,7 +210,9 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
   private expandBlocks<T>(
     sheet: Sheet<T>,
     blocks: Block[],
-    lookupFunction: (name: string) => TemplaterFunction<any> | undefined,
+    lookupFunction: (
+      name: string,
+    ) => TemplaterFunction<any, SheetAddr> | undefined,
     lookupVariable: (name: string) => any | undefined,
     sheetShiftEmitter: SheetShiftEmitter,
   ): Result<Indexable2DArray<Record<string, any>>, SheetAddr> {
@@ -258,9 +265,9 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       if (typeof block.arg === "string") {
         if (isNumeric(block.arg)) {
           const num = parseInt(block.arg);
-          repeatAmountResult = success(num);
+          repeatAmountResult = success<number, SheetAddr>(num);
         } else {
-          repeatAmountResult = failure(
+          repeatAmountResult = failure<number, SheetAddr>(
             {
               message: `invalid repeat block argument "${block.arg}"`,
               addr: {
@@ -272,11 +279,13 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
           );
         }
       } else {
-        repeatAmountResult = evaluateExpression(
+        repeatAmountResult = evaluateExpression<SheetAddr>(
           block.arg,
           {
-            col: block.start.col,
-            row: block.start.row,
+            addr: {
+              col: block.start.col,
+              row: block.start.row,
+            },
             callTree: [`${block.identifier} block`],
           },
           (fName) => lookupFunction(fName),
@@ -472,7 +481,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       context,
       lookupVariable,
     }: {
-      context: { row: number; col: number };
+      context: { addr: SheetAddr };
       lookupVariable: (name: string) => any | undefined;
     },
   ): Result<SheetT, SheetAddr> {

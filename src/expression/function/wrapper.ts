@@ -2,9 +2,9 @@ import { z } from "zod";
 import { LambdaFunction, TemplaterFunction } from "../evaluate";
 import { failure, Result, success } from "../../result";
 
-export function createTemplaterNoArgsFunction<R>(
+export function createTemplaterNoArgsFunction<R, Addr>(
   call: () => R,
-): TemplaterFunction<R> {
+): TemplaterFunction<R, Addr> {
   return () => success(call());
 }
 
@@ -18,12 +18,12 @@ export function createTemplaterNoArgsFunction<R>(
  *   | { status: "failed"; issues: Issue[]; error: Issue; sym: ResultSymbol };
  * ```
  */
-export function callLambda(
+export function callLambda<Addr>(
   f: Function,
 ): (opts: {
   variables?: Record<string, any>;
   customVariableResolver?: (variableName: string) => any;
-}) => Result<any> {
+}) => Result<any, Addr> {
   return (opts) =>
     f(
       (vName: string) =>
@@ -31,10 +31,12 @@ export function callLambda(
     );
 }
 
-type MapFunctionToLambda<T> = T extends (...args: any[]) => infer R
-  ? LambdaFunction<R>
+type MapFunctionToLambda<T, Addr> = T extends (...args: any[]) => infer R
+  ? LambdaFunction<R, Addr>
   : T;
-type MapFunctionsToLambdas<T> = { [K in keyof T]: MapFunctionToLambda<T[K]> };
+type MapFunctionsToLambdas<T, Addr> = {
+  [K in keyof T]: MapFunctionToLambda<T[K], Addr>;
+};
 
 /**
  * ## Calling a lambda
@@ -74,10 +76,16 @@ type MapFunctionsToLambdas<T> = { [K in keyof T]: MapFunctionToLambda<T[K]> };
  *
  * See `success(...)`, and `failure(...)` to easily create `Result<any>` objects.
  */
-export function createTemplaterFunction<T extends z.AnyZodTuple, R>(
-  schema: T,
-  call: (...args: MapFunctionsToLambdas<z.infer<T>>) => Result<R>,
-): TemplaterFunction<R> {
+export function createTemplaterFunction<
+  Addr,
+  ReturnType,
+  ArgsZod extends z.AnyZodTuple,
+>(
+  schema: ArgsZod,
+  call: (
+    ...args: MapFunctionsToLambdas<z.infer<ArgsZod>, Addr>
+  ) => Result<ReturnType, Addr>,
+): TemplaterFunction<ReturnType, Addr> {
   return ({ functionName, ...context }, ...args: any) => {
     const result = schema.safeParse(args);
 
@@ -88,23 +96,21 @@ export function createTemplaterFunction<T extends z.AnyZodTuple, R>(
       return failure(
         {
           message: `Invalid arguments while calling ${functionName}. trace: ${context.callTree.join(" > ")}`,
-          col: context.col,
-          row: context.row,
+          addr: context.addr,
         },
         [],
       );
     }
 
     try {
-      return call(...(result.data as MapFunctionsToLambdas<z.infer<T>>));
+      return call(...(result.data as MapFunctionsToLambdas<z.infer<ArgsZod>, Addr>));
     } catch (e) {
       return failure(
         {
           message: `Error while calling ${functionName}. trace: ${context.callTree.join(
             " > ",
           )}. Error: ${JSON.stringify(e)}`,
-          col: context.col,
-          row: context.row,
+          addr: context.addr,
         },
         [],
       );

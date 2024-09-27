@@ -27,7 +27,7 @@ export async function xlsxFillTemplate(
   output: WritableStream,
   input: any,
   opts?: {
-    functions?: Record<string, TemplaterFunction<any>>;
+    functions?: Record<string, TemplaterFunction<any, SheetAddr>>;
     onSheetFinished: (sheetPath: string, status: SheetFinishStatus) => void;
   },
 ) {
@@ -138,7 +138,7 @@ class XlsxCell implements TemplatableCell {
 class XlsxTemplater {
   // a list of raw XML, make sure to pass it as-is. tends to be <t> tags
   private sharedStrings: any[] = [];
-  private functions: Record<string, TemplaterFunction<any>> = {};
+  private functions: Record<string, TemplaterFunction<any, SheetAddr>> = {};
 
   private parseSharedStrings(sharedStringsXml: string) {
     const options: X2jOptions & XmlBuilderOptions = {
@@ -162,7 +162,7 @@ class XlsxTemplater {
 
   constructor(
     sharedStringsXml?: string,
-    functions?: Record<string, TemplaterFunction<any>>,
+    functions?: Record<string, TemplaterFunction<any, SheetAddr>>,
   ) {
     if (sharedStringsXml) this.parseSharedStrings(sharedStringsXml);
     if (functions) this.functions = functions;

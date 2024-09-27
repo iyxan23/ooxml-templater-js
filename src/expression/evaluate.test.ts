@@ -5,6 +5,7 @@ import { evaluateExpression } from "./evaluate";
 import { Issue } from "src/result";
 import { BasicExpression } from "./parser";
 import { success } from "../result";
+import { SheetAddr } from "src/sheet/sheet-templater";
 
 function mockWarn() {
   return vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -23,7 +24,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (_fName) => undefined,
       (vName) => (vName === "hello" ? "world" : undefined),
     );
@@ -49,7 +50,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (fName) =>
         fName === "hello"
           ? (_funcName, arg) => success("hello, " + JSON.stringify(arg))
@@ -81,7 +82,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (_fName) => undefined,
       (_vName) => undefined,
     );
@@ -124,7 +125,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (fName) =>
         fName === "call"
           ? (_funcName, ...args) => success("called: " + JSON.stringify(args))
@@ -163,7 +164,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (fName) =>
         fName === "hello"
           ? (_funcName, arg) => success("hello " + arg)
@@ -220,7 +221,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (fName) =>
         fName === "call"
           ? createTemplaterFunction(z.tuple([z.function()]), (s) => {
@@ -258,7 +259,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (_fName) => undefined,
       (vName) =>
         vName === "var"
@@ -296,7 +297,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (fName) =>
         fName === "getHow"
           ? createTemplaterNoArgsFunction(() => "how")
@@ -352,15 +353,15 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { col: 0, row: 0, callTree: ["root"] },
+      { addr: { col: 0, row: 0, }, callTree: ["root"] },
       (fName) =>
         ({
           map: createTemplaterFunction(
             z.tuple([z.array(z.any()), z.string(), z.function()]),
             (arr, ident, fn) => {
-              const fnLambda = callLambda(fn);
+              const fnLambda = callLambda<SheetAddr>(fn);
               const r: any[] = [];
-              const issues: Issue<[number, number]>[] = [];
+              const issues: Issue<SheetAddr>[] = [];
 
               for (const item of arr) {
                 const result = fnLambda({ variables: { [ident]: item } });
