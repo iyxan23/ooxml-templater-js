@@ -49,7 +49,7 @@ export function performDocumentTemplating(
 
   const repeatLineResult = handleRepeatLines(items, specials.l.repeatLines, {
     lookupFunction: (funcName: string) =>
-      docxBuiltinFunctions[funcName] ?? opts.functions[funcName],
+      docxBuiltinFunctions[funcName] ?? opts?.functions[funcName],
     lookupVariable: (addr: DocAddr, varName: string) =>
       variables[addr]?.[varName] ?? input[varName],
     defineVariable: (addr: DocAddr, name: string, value: any) => {
@@ -177,7 +177,7 @@ function handleRepeatLines(
       defineVariable(addr + i, repeatLine.idxVarIdentifier, i);
   }
 
-  return success({ elements: newItems });
+  return success(newItems);
 }
 
 class ElementPair implements Expressionish {
