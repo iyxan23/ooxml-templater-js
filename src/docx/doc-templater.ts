@@ -108,14 +108,17 @@ type RepeatLine = {
   idxVarIdentifier: string;
 };
 
-function extractVarsAndSpecials(parsedItems: ElementPair[]): Result<{
-  variables: Record<DocAddr, Record<string, Variable>>;
-  specials: {
-    l: {
-      repeatLines: Record<DocAddr, RepeatLine>;
+function extractVarsAndSpecials(parsedItems: ElementPair[]): Result<
+  {
+    variables: Record<DocAddr, Record<string, Variable>>;
+    specials: {
+      l: {
+        repeatLines: Record<DocAddr, RepeatLine>;
+      };
     };
-  };
-}, DocAddr> {
+  },
+  DocAddr
+> {
   const variables: Record<DocAddr, Record<string, Variable>> = {};
   const specials: { l: { repeatLines: Record<string, RepeatLine> } } = {
     l: { repeatLines: {} },
@@ -130,23 +133,25 @@ function extractVarsAndSpecials(parsedItems: ElementPair[]): Result<{
         const args = expr.args;
         if (expr.code === "l" && expr.identifier === "repeatLine") {
           if (args.length !== 2) {
-            // issues.push({
-            //   message: "[l#repeatLine] requires two arguments: [l#repeatLine [expr] ..ident..]"
-            // })
-            // todo: make issue generic
-            throw new Error(
-              "[l#repeatLine] requires two arguments: [l#repeatLine [expr] ..ident..]",
-            );
+            issues.push({
+              message:
+                "[l#repeatLine] requires two arguments: [l#repeatLine [expr] ..ident..]",
+              addr,
+            });
+
+            return { deleteExpr: true };
           }
 
           const countExpr = expr.args[0]!;
           const idxVarIdentifier = expr.args[1]!;
 
           if (typeof idxVarIdentifier !== "string") {
-            // todo: make issue generic
-            throw new Error(
-              "[l#repeatLine] 2nd argument must be a text identifier",
-            );
+            issues.push({
+              message: "[l#repeatLine] 2nd argument must be a text identifier",
+              addr,
+            });
+
+            return { deleteExpr: true };
           }
 
           specials.l.repeatLines[addr] = {
@@ -160,21 +165,24 @@ function extractVarsAndSpecials(parsedItems: ElementPair[]): Result<{
           (expr.identifier === "var" || expr.identifier === "hoist")
         ) {
           if (args.length !== 2) {
-            // issues.push({
-            //   message: "[g#var] requires two arguments: [g#var ident [expr]]"
-            // })
-            // todo: make issue generic
-            throw new Error(
-              "[g#var] requires two arguments: [g#var ident [expr]]",
-            );
+            issues.push({
+              message: "[g#var] requires two arguments: [g#var ident [expr]]",
+              addr,
+            });
+
+            return { deleteExpr: true };
           }
 
           const identifier = expr.args[0]!;
           const varExpr = expr.args[1]!;
 
           if (typeof identifier !== "string") {
-            // todo: make issue generic
-            throw new Error("[g#var] 1st argument must be a text identifier");
+            issues.push({
+              message: "[g#var] 1st argument must be a text identifier",
+              addr,
+            });
+
+            return { deleteExpr: true };
           }
 
           if (variables[addr] === undefined) {
@@ -189,11 +197,11 @@ function extractVarsAndSpecials(parsedItems: ElementPair[]): Result<{
           return { deleteExpr: true };
         }
 
-        // todo: make issue generic
-        console.warn(
-          "unhandled special call",
-          `[${expr.code}#${expr.identifier}]`,
-        );
+        issues.push({
+          message: `unhandled special call [${expr.code}#${expr.identifier}]`,
+          addr,
+        });
+
         return { deleteExpr: true };
       },
     },
