@@ -15,10 +15,7 @@ import {
 import { Sheet } from "./sheet";
 import { evaluateExpression, TemplaterFunction } from "../expression/evaluate";
 import { Result, resultSymbol, success, Issue, failure } from "../result";
-import {
-  builtinFunctions,
-  getBuiltinFunctions,
-} from "../expression/function/builtin";
+import { getBuiltinFunctions } from "../expression/function/builtin";
 import { Block, extractVarsAndBlocks } from "./sheet-extractor";
 import { isNumeric } from "../utils";
 

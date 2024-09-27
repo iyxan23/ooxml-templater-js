@@ -8,7 +8,7 @@ import { BlobReader, BlobWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { docxClosingTags } from "./docx-closing-tags-list";
 import { startVisiting } from "../visitor-editor";
 import { collectBodyElements, rebuildBodyElements } from "./doc-elements";
-import { DocAddr, performTemplating } from "./doc-templater";
+import { DocAddr, performDocumentTemplating } from "./doc-templater";
 import { Result, success } from "../result";
 
 export async function docxFillTemplate(
@@ -92,7 +92,7 @@ async function templateDocument(xml: any, input: any): Promise<Result<any, DocAd
   if (!body) return xml;
 
   const items = await collectBodyElements(body);
-  const templatedItems = performTemplating(items, input);
+  const templatedItems = performDocumentTemplating(items, input);
 
   if (templatedItems.status === "failed") return templatedItems;
 
