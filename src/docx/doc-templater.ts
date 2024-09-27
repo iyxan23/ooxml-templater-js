@@ -47,25 +47,105 @@ export function performDocumentTemplating(
 
   issues.push(...variableEvalResult.issues);
 
-  const repeatLineResult = handleRepeatLines(items, specials.l.repeatLines, {
-    lookupFunction: (funcName: string) =>
-      docxBuiltinFunctions[funcName] ?? opts?.functions[funcName],
-    lookupVariable: (addr: DocAddr, varName: string) =>
-      variables[addr]?.[varName] ?? input[varName],
-    defineVariable: (addr: DocAddr, name: string, value: any) => {
-      if (variables[addr] === undefined) variables[addr] = { [name]: value };
-      else variables[addr] = value;
+  const repeatLineResult = handleRepeatLines(
+    parsedItems,
+    specials.l.repeatLines,
+    {
+      lookupFunction: (funcName: string) =>
+        docxBuiltinFunctions[funcName] ?? opts?.functions[funcName],
+      lookupVariable: (addr: DocAddr, varName: string) =>
+        variables[addr]?.[varName] ?? input[varName],
+      defineVariable: (addr: DocAddr, name: string, value: any) => {
+        if (variables[addr] === undefined) variables[addr] = { [name]: value };
+        else variables[addr] = value;
+      },
     },
-  });
+  );
 
   if (repeatLineResult.status === "failed") return repeatLineResult;
   issues.push(...repeatLineResult.issues);
 
   const newItems = repeatLineResult.result;
 
-  // todo: evaluate expressions
+  const evaluatedItemsStringsResult = evaluateExpressionsAsStrings(newItems, {
+    lookupVariable: (addr: DocAddr, varName: string) =>
+      variables[addr]?.[varName] ?? input[varName],
+    lookupFunction: (funcName: string) =>
+      docxBuiltinFunctions[funcName] ?? opts?.functions[funcName],
+  });
 
-  return success(newItems);
+  if (evaluatedItemsStringsResult.status === "failed")
+    return evaluatedItemsStringsResult;
+  issues.push(...evaluatedItemsStringsResult.issues);
+
+  const evaluatedItemsStrings = evaluatedItemsStringsResult.result;
+  const evaluatedItems = rebuildBodyElements(newItems, evaluatedItemsStrings);
+
+  return success(evaluatedItems);
+}
+
+function evaluateExpressionsAsStrings(
+  items: ElementPair[],
+  {
+    lookupVariable,
+    lookupFunction,
+  }: {
+    lookupVariable: (addr: DocAddr, varName: string) => any;
+    lookupFunction: (
+      funcName: string,
+    ) => TemplaterFunction<any, DocAddr> | undefined;
+  },
+): Result<string[], DocAddr> {
+  const issues: Issue<DocAddr>[] = [];
+  const elements: string[] = [];
+
+  for (let addr = 0; addr < items.length; addr++) {
+    const item = items[addr]!;
+    const itemExpr = item.expr;
+    let textContent = "";
+
+    if (!itemExpr) continue;
+
+    for (const expr of itemExpr) {
+      if (typeof expr === "string") {
+        textContent += expr;
+        continue;
+      }
+
+      const result = evaluateExpression<DocAddr>(
+        expr,
+        { addr, callTree: ["<root>"] },
+        lookupFunction,
+        (varName) => lookupVariable(addr, varName),
+      );
+
+      if (result.status === "failed") {
+        issues.push({
+          message: `failed to evaluate expression: ${result.error.message} at line ${result.error.addr}`,
+          addr,
+        });
+
+        continue;
+      }
+
+      const value = result.result;
+
+      if (typeof value !== "string") {
+        issues.push({
+          message: `result is not a string but ${typeof value}, will use JSON.stringify()`,
+          addr,
+        });
+
+        textContent += JSON.stringify(value);
+      } else {
+        textContent += result.result;
+      }
+    }
+
+    elements.push(textContent);
+  }
+
+  return success(elements, issues);
 }
 
 function evaluateVariables(
@@ -87,11 +167,11 @@ function evaluateVariables(
         typeof def.expr === "string"
           ? success<string, DocAddr>(def.expr)
           : evaluateExpression<DocAddr>(
-            def.expr,
-            { addr, callTree: ["<root>", "g#var", "arg0"] },
-            (funcName: string) => docxBuiltinFunctions[funcName] ?? undefined,
-            (varName) => lookupVariable(addr, varName),
-          );
+              def.expr,
+              { addr, callTree: ["<root>", "g#var", "arg0"] },
+              (funcName: string) => docxBuiltinFunctions[funcName] ?? undefined,
+              (varName) => lookupVariable(addr, varName),
+            );
 
       if (result.status === "failed") {
         issues.push({
@@ -111,7 +191,7 @@ function evaluateVariables(
 }
 
 function handleRepeatLines(
-  items: BodyElement[],
+  items: ElementPair[],
   specials: Record<DocAddr, RepeatLine>,
   {
     lookupFunction,
@@ -124,16 +204,16 @@ function handleRepeatLines(
     lookupVariable: (addr: DocAddr, name: string) => any | undefined;
     defineVariable: (addr: DocAddr, name: string, value: any) => void;
   },
-): Result<BodyElement[], DocAddr> {
+): Result<ElementPair[], DocAddr> {
   const issues: Issue<DocAddr>[] = [];
-  const newItems: BodyElement[] = [];
+  const elements: ElementPair[] = [];
 
   for (let addr = 0; addr < items.length; addr++) {
     const item = items[addr]!;
     const repeatLine = specials[addr];
 
     if (repeatLine === undefined) {
-      newItems.push(item);
+      elements.push(item);
       continue;
     }
 
@@ -171,13 +251,13 @@ function handleRepeatLines(
       issues.push(...result.issues);
     }
 
-    newItems.push(...Array(repeatCount).fill(item));
+    elements.push(...Array(repeatCount).fill(item));
 
     for (let i = 0; i < repeatCount; i++)
       defineVariable(addr + i, repeatLine.idxVarIdentifier, i);
   }
 
-  return success(newItems);
+  return success(elements);
 }
 
 class ElementPair implements Expressionish {
@@ -186,7 +266,7 @@ class ElementPair implements Expressionish {
     public elem: BodyElement,
     // the actual parsed expression
     public expr?: BasicExpressionsWithStaticTexts,
-  ) { }
+  ) {}
 
   getExpression(): BasicExpressionsWithStaticTexts {
     return this.expr ?? [];
@@ -238,8 +318,38 @@ function parseBodyElements(elements: BodyElement[]): ElementPair[] {
   return expressions;
 }
 
+function rebuildBodyElements(
+  items: ElementPair[],
+  strings: string[],
+): BodyElement[] {
+  return items.map((item, idx) => {
+    const str = strings[idx]!;
+
+    if (item.elem.type === "paragraph") {
+      const { text } = item.elem;
+      if (!text) return item.elem;
+
+      return {
+        ...item.elem,
+        type: "paragraph",
+        text: item.elem.text
+          ? {
+              ...item.elem.text,
+              text: str,
+            }
+          : undefined,
+      };
+    } else if (item.elem.type === "table") {
+      // todo: handle tables
+      return item.elem;
+    } else {
+      return item.elem;
+    }
+  });
+}
+
 class DocumentSource implements Source<number, ElementPair> {
-  constructor(private elements: ElementPair[]) { }
+  constructor(private elements: ElementPair[]) {}
 
   getItem(addr: number): ElementPair | null {
     return this.elements[addr] ?? null;
