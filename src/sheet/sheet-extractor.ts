@@ -12,12 +12,13 @@ import {
 } from "../expression/parser";
 import { Sheet } from "./sheet";
 import { Issue } from "../result";
+import { SheetAddr } from "./sheet-templater";
 
 class BasicExpressionsWrapper<SheetT> implements Expressionish {
   constructor(
     public exprs: BasicExpressionsWithStaticTexts,
     public extraData: SheetT,
-  ) {}
+  ) { }
 
   getExpression(): BasicExpressionsWithStaticTexts {
     return this.exprs;
@@ -42,17 +43,14 @@ class BasicExpressionsWrapper<SheetT> implements Expressionish {
   }
 }
 
-type SheetAddr = [number, number];
-
 class SheetAdapter<SheetT>
-  implements Source<SheetAddr, BasicExpressionsWrapper<SheetT>>
-{
+  implements Source<SheetAddr, BasicExpressionsWrapper<SheetT>> {
   constructor(
     private sheet: Sheet<[BasicExpressionsWithStaticTexts, SheetT]>,
-  ) {}
+  ) { }
 
   getItem(addr: SheetAddr): BasicExpressionsWrapper<SheetT> | null {
-    const [col, row] = addr;
+    const { col, row } = addr;
     const cell = this.sheet.getCell(col, row);
 
     if (cell === null) return null;
@@ -62,7 +60,7 @@ class SheetAdapter<SheetT>
   }
 
   setItem(addr: SheetAddr, item: BasicExpressionsWrapper<SheetT>): void {
-    const [col, row] = addr;
+    const { col, row } = addr;
     this.sheet.setCell(col, row, [item.exprs, item.extraData]);
   }
 }
@@ -102,17 +100,21 @@ export function extractVarsAndBlocks<SheetT>(
 ): {
   blocks: Block[];
   variables: VariableHoist[];
-  issues: Issue[];
+  issues: Issue<SheetAddr>[];
 } {
   const { rowBound, colBound } = sheet.getBounds();
 
-  return extractVarsAndBlocksInternal(sheet, [0, 0], ([curCol, curRow]) => {
-    return curCol >= colBound
-      ? curRow >= rowBound
-        ? null
-        : [0, curRow + 1]
-      : [curCol + 1, curRow];
-  });
+  return extractVarsAndBlocksInternal(
+    sheet,
+    { col: 0, row: 0 },
+    ({ col: curCol, row: curRow }) => {
+      return curCol >= colBound
+        ? curRow >= rowBound
+          ? null
+          : { col: 0, row: curRow + 1 }
+        : { col: curCol + 1, row: curRow };
+    },
+  );
 }
 
 function extractVarsAndBlocksInternal<SheetT>(
@@ -125,7 +127,7 @@ function extractVarsAndBlocksInternal<SheetT>(
 ): {
   blocks: Block[];
   variables: VariableHoist[];
-  issues: Issue[];
+  issues: Issue<SheetAddr>[];
 } {
   const source = new SheetAdapter<SheetT>(sheet);
 
@@ -133,7 +135,7 @@ function extractVarsAndBlocksInternal<SheetT>(
 
   const blocks: Block[] = [];
   const variables: VariableHoist[] = [];
-  const issues: Issue[] = [];
+  const issues: Issue<SheetAddr>[] = [];
 
   extract<SheetAddr, BasicExpressionsWrapper<SheetT>>(
     source,
@@ -142,14 +144,16 @@ function extractVarsAndBlocksInternal<SheetT>(
         if (expr.identifier !== "hoist" && expr.identifier !== "var") return;
 
         // this is a variable hoist
-        const [col, row] = addr;
+        const { col, row } = addr;
         const args = expr.args;
 
         if (args.length !== 2) {
           issues.push({
             message: "variable declaration must have two arguments",
-            col,
-            row,
+            addr: {
+              col,
+              row,
+            },
           });
 
           return { deleteExpr: true };
@@ -161,8 +165,10 @@ function extractVarsAndBlocksInternal<SheetT>(
           issues.push({
             message:
               "variable declaration's first argument must be an identifier",
-            col,
-            row,
+            addr: {
+              col,
+              row,
+            },
           });
 
           return { deleteExpr: true };
@@ -179,7 +185,7 @@ function extractVarsAndBlocksInternal<SheetT>(
       },
 
       visitSpecialCall(addr, _item, expr, _index) {
-        const [col, row] = addr;
+        const { col, row } = addr;
 
         // todo: make this extensible
         const available: Record<string, Record<string, boolean>> = {
@@ -190,8 +196,10 @@ function extractVarsAndBlocksInternal<SheetT>(
         if (!available[expr.code]?.[expr.identifier]) {
           issues.push({
             message: `unknown special call "${expr.code}#${expr.identifier}"`,
-            col,
-            row,
+            addr: {
+              col,
+              row,
+            },
           });
 
           return { deleteExpr: true };
@@ -201,8 +209,10 @@ function extractVarsAndBlocksInternal<SheetT>(
         if (expr.closing) {
           issues.push({
             message: `closing special call "${expr.identifier}" encountered without an opening`,
-            col,
-            row,
+            addr: {
+              col,
+              row,
+            },
           });
 
           return { deleteExpr: true };
@@ -215,8 +225,10 @@ function extractVarsAndBlocksInternal<SheetT>(
             issues.push({
               message:
                 "repeatRow must have at least two arguments: number of repeats, and a local index variable identifier",
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
             });
 
             return { deleteExpr: true };
@@ -226,12 +238,14 @@ function extractVarsAndBlocksInternal<SheetT>(
           // closing repeatRow
           let closingExpr: { col: number; row: number } | undefined = undefined;
 
-          const next = advance([col, row]);
+          const next = advance({ col, row });
           if (next === null) {
             issues.push({
               message: "repeatRow reached the end of the sheet",
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
             });
             return { deleteExpr: true };
           }
@@ -243,23 +257,23 @@ function extractVarsAndBlocksInternal<SheetT>(
           } = extractVarsAndBlocksInternal(
             sheet,
             next,
-            ([cCol, cRow]) => {
+            ({ col: cCol, row: cRow }) => {
               // stop once we found a closing repeatRow
               if (closingExpr !== undefined) return null;
 
               if (cCol + 1 > colBound) {
                 if (cRow + 1 > rowBound) return null;
-                return [0, cRow + 1];
+                return { col: cCol + 1, row: cRow };
               }
 
-              return [cCol + 1, cRow];
+              return { col: cCol + 1, row: cRow };
             },
             (expr, addr) => {
               if (expr.type !== "specialCall") return;
               if (expr.code !== "r" && expr.identifier !== "repeatRow") return;
               if (!expr.closing) return;
 
-              const [cCol, cRow] = addr;
+              const { col: cCol, row: cRow } = addr;
 
               closingExpr = { col: cCol, row: cRow };
 
@@ -274,8 +288,10 @@ function extractVarsAndBlocksInternal<SheetT>(
           if (closingExpr === undefined) {
             issues.push({
               message: "closing repeatRow not found",
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
             });
 
             return { deleteExpr: true };
@@ -286,8 +302,7 @@ function extractVarsAndBlocksInternal<SheetT>(
           if (typeof indexVariableIdent !== "string") {
             issues.push({
               message: "repeatRow's second argument must be an identifier",
-              col,
-              row,
+              addr: { col, row },
             });
 
             return { deleteExpr: true };
@@ -312,8 +327,10 @@ function extractVarsAndBlocksInternal<SheetT>(
             issues.push({
               message:
                 "repeatRow must have at least two arguments: number of repeats, and a local index variable identifier",
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
             });
 
             return { deleteExpr: true };
@@ -323,7 +340,7 @@ function extractVarsAndBlocksInternal<SheetT>(
           // closing repeatCol
           let closingExpr: { col: number; row: number } | undefined = undefined;
 
-          const next: [number, number] = [col, row + 1];
+          const next = { col, row: row + 1 };
 
           const {
             blocks: innerBlocks,
@@ -332,20 +349,20 @@ function extractVarsAndBlocksInternal<SheetT>(
           } = extractVarsAndBlocksInternal(
             sheet,
             next,
-            ([cCol, cRow]) => {
+            ({ col: cCol, row: cRow }) => {
               // stop once we found a closing repeatRow
               if (closingExpr !== undefined) return null;
 
               // literally just go down
               if (cRow + 1 > rowBound) return null;
-              return [cCol, cRow + 1];
+              return { col: cCol, row: cRow + 1 };
             },
             (expr, addr) => {
               if (expr.type !== "specialCall") return;
               if (expr.code !== "c" && expr.identifier !== "repeatCol") return;
               if (!expr.closing) return;
 
-              const [cCol, cRow] = addr;
+              const { col: cCol, row: cRow } = addr;
 
               closingExpr = { col: cCol, row: cRow };
 
@@ -360,8 +377,10 @@ function extractVarsAndBlocksInternal<SheetT>(
           if (closingExpr === undefined) {
             issues.push({
               message: "closing repeatCol not found",
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
             });
 
             return { deleteExpr: true };
@@ -372,8 +391,10 @@ function extractVarsAndBlocksInternal<SheetT>(
           if (typeof indexVariableIdent !== "string") {
             issues.push({
               message: "repeatCol's second argument must be an identifier",
-              col,
-              row,
+              addr: {
+                col,
+                row,
+              },
             });
 
             return { deleteExpr: true };

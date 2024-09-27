@@ -29,6 +29,9 @@ export interface TemplatableCell {
 // @internal
 export type Indexable2DArray<T> = Record<number, Record<number, T>>;
 
+// @internal
+export type SheetAddr = { col: number; row: number };
+
 type SheetShiftListener = (
   shift:
     | {
@@ -93,9 +96,12 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
   interpret(
     data: any,
     { onShift }: { onShift?: SheetShiftListener },
-  ): Result<{
-    sheet: Sheet<SheetT>;
-  }> {
+  ): Result<
+    {
+      sheet: Sheet<SheetT>;
+    },
+    SheetAddr
+  > {
     const issues = [];
     const parsedExpressions = this.parseExpressions(this.sheet);
 
@@ -202,8 +208,8 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
     lookupFunction: (name: string) => TemplaterFunction<any> | undefined,
     lookupVariable: (name: string) => any | undefined,
     sheetShiftEmitter: SheetShiftEmitter,
-  ): Result<Indexable2DArray<Record<string, any>>> {
-    const issues: Issue[] = [];
+  ): Result<Indexable2DArray<Record<string, any>>, SheetAddr> {
+    const issues: Issue<SheetAddr>[] = [];
     let localVariables: Indexable2DArray<Record<string, any>> = {};
 
     function setLocalVariables(
@@ -257,8 +263,10 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
           repeatAmountResult = failure(
             {
               message: `invalid repeat block argument "${block.arg}"`,
-              col: block.start.col,
-              row: block.start.row,
+              addr: {
+                col: block.start.col,
+                row: block.start.row,
+              },
             },
             issues,
           );
@@ -467,8 +475,8 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       context: { row: number; col: number };
       lookupVariable: (name: string) => any | undefined;
     },
-  ): Result<SheetT> {
-    const issues: Issue[] = [];
+  ): Result<SheetT, SheetAddr> {
+    const issues: Issue<SheetAddr>[] = [];
     let result = "";
 
     for (const item of cell) {

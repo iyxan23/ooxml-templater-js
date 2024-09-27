@@ -7,7 +7,11 @@ import {
 } from "fast-xml-parser";
 import { startVisiting } from "../visitor-editor";
 import { Sheet } from "../sheet/sheet";
-import { SheetTemplater, TemplatableCell } from "../sheet/sheet-templater";
+import {
+  SheetAddr,
+  SheetTemplater,
+  TemplatableCell,
+} from "../sheet/sheet-templater";
 import { TemplaterFunction } from "../expression/evaluate";
 import { Issue } from "../result";
 import { isNumeric } from "../utils";
@@ -15,8 +19,8 @@ import { isNumeric } from "../utils";
 const SHARED_STRINGS_ENTRY = "xl/sharedStrings.xml";
 
 export type SheetFinishStatus =
-  | { status: "success"; issues: Issue[] }
-  | { status: "failed"; issues: Issue[]; error: Issue };
+  | { status: "success"; issues: Issue<SheetAddr>[] }
+  | { status: "failed"; issues: Issue<SheetAddr>[]; error: Issue<SheetAddr> };
 
 export async function xlsxFillTemplate(
   xlsx: ReadableStream,
@@ -170,8 +174,8 @@ class XlsxTemplater {
     templateContent: string,
     data: any,
   ): Promise<
-    { xml: string; issues: Issue[] } & (
-      | { error: true; cause: Issue }
+    { xml: string; issues: Issue<SheetAddr>[] } & (
+      | { error: true; cause: Issue<SheetAddr> }
       | { error: false }
     )
   > {
@@ -258,10 +262,10 @@ class XlsxTemplater {
           new XlsxCell({
             v:
               `failed to template: ${templateResult.error.message} at ` +
-              `column ${templateResult.error.col + 1}` +
-              ` row ${templateResult.error.row + 1} or ${createAddressNumber(
-                templateResult.error.col,
-                templateResult.error.row,
+              `column ${templateResult.error.addr.col + 1}` +
+              ` row ${templateResult.error.addr.row + 1} or ${createAddressNumber(
+                templateResult.error.addr.col,
+                templateResult.error.addr.row,
               )}`,
           }),
         ],
@@ -278,7 +282,7 @@ class XlsxTemplater {
         if (col > 0) return null;
 
         return new XlsxCell({
-          v: `[ISSUE] ${issue.message} at column ${issue.col} row ${issue.row}`,
+          v: `[ISSUE] ${issue.message} at column ${issue.addr.col} row ${issue.addr.row}`,
         });
       });
       lastRow++;

@@ -1,18 +1,17 @@
 export const resultSymbol = Symbol("result");
 export type ResultSymbol = typeof resultSymbol;
 
-export type Issue = {
-  col: number;
-  row: number;
+export type Issue<Addr> = {
+  addr: Addr;
   message: string;
   index?: number;
 };
 
-export type Result<T> =
-  | { status: "success"; result: T; issues: Issue[]; sym: ResultSymbol }
-  | { status: "failed"; issues: Issue[]; error: Issue; sym: ResultSymbol };
+export type Result<T, Addr> =
+  | { status: "success"; result: T; issues: Issue<Addr>[]; sym: ResultSymbol }
+  | { status: "failed"; issues: Issue<Addr>[]; error: Issue<Addr>; sym: ResultSymbol };
 
-export function success<T>(result: T, issues: Issue[] = []): Result<T> {
+export function success<T, Addr>(result: T, issues: Issue<Addr>[] = []): Result<T, Addr> {
   return {
     status: "success",
     result,
@@ -21,7 +20,7 @@ export function success<T>(result: T, issues: Issue[] = []): Result<T> {
   };
 }
 
-export function failure<T>(error: Issue, issues: Issue[] = []): Result<T> {
+export function failure<T, Addr>(error: Issue<Addr>, issues: Issue<Addr>[] = []): Result<T, Addr> {
   return {
     status: "failed",
     error,
@@ -30,6 +29,6 @@ export function failure<T>(error: Issue, issues: Issue[] = []): Result<T> {
   };
 }
 
-export function isResult(result: any): result is Result<any> {
+export function isResult(result: any): result is Result<any, any> {
   return result.sym === resultSymbol;
 }

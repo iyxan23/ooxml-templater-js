@@ -8,10 +8,13 @@ import { Issue, Result, success } from "../result";
 import { Expressionish, extract, Source } from "../expression/extractor";
 
 // @internal
+export type DocAddr = number;
+
+// @internal
 export function performTemplating(
   items: BodyElement[],
   input: any,
-): Result<BodyElement[]> {
+): Result<BodyElement[], DocAddr> {
   const parsedItems = parseBodyElements(items);
   const result = extractVarsAndSpecials(parsedItems);
 
@@ -106,21 +109,21 @@ type RepeatLine = {
 };
 
 function extractVarsAndSpecials(parsedItems: ElementPair[]): Result<{
-  variables: Record<number, Record<string, Variable>>;
+  variables: Record<DocAddr, Record<string, Variable>>;
   specials: {
     l: {
-      repeatLines: Record<number, RepeatLine>;
+      repeatLines: Record<DocAddr, RepeatLine>;
     };
   };
-}> {
-  const variables: Record<number, Record<string, Variable>> = {};
+}, DocAddr> {
+  const variables: Record<DocAddr, Record<string, Variable>> = {};
   const specials: { l: { repeatLines: Record<string, RepeatLine> } } = {
     l: { repeatLines: {} },
   };
 
-  const issues: Issue[] = [];
+  const issues: Issue<DocAddr>[] = [];
 
-  extract<number, ElementPair>(
+  extract<DocAddr, ElementPair>(
     new DocumentSource(parsedItems),
     {
       visitSpecialCall(addr, _item, expr, _index) {

@@ -360,7 +360,7 @@ describe("expression evaluation", () => {
             (arr, ident, fn) => {
               const fnLambda = callLambda(fn);
               const r: any[] = [];
-              const issues: Issue[] = [];
+              const issues: Issue<[number, number]>[] = [];
 
               for (const item of arr) {
                 const result = fnLambda({ variables: { [ident]: item } });
