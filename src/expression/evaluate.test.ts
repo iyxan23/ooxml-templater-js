@@ -24,7 +24,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (_fName) => undefined,
       (vName) => (vName === "hello" ? "world" : undefined),
     );
@@ -50,7 +50,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (fName) =>
         fName === "hello"
           ? (_funcName, arg) => success("hello, " + JSON.stringify(arg))
@@ -82,7 +82,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (_fName) => undefined,
       (_vName) => undefined,
     );
@@ -95,8 +95,10 @@ describe("expression evaluation", () => {
     expect(result.issues).toHaveLength(1);
     expect(result.issues).toContainEqual(
       expect.objectContaining({
-        col: 0,
-        row: 0,
+        addr: {
+          col: 0,
+          row: 0,
+        },
         // message may change
       }),
     );
@@ -125,7 +127,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (fName) =>
         fName === "call"
           ? (_funcName, ...args) => success("called: " + JSON.stringify(args))
@@ -164,7 +166,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (fName) =>
         fName === "hello"
           ? (_funcName, arg) => success("hello " + arg)
@@ -221,7 +223,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (fName) =>
         fName === "call"
           ? createTemplaterFunction(z.tuple([z.function()]), (s) => {
@@ -259,7 +261,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (_fName) => undefined,
       (vName) =>
         vName === "var"
@@ -297,7 +299,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (fName) =>
         fName === "getHow"
           ? createTemplaterNoArgsFunction(() => "how")
@@ -353,7 +355,7 @@ describe("expression evaluation", () => {
 
     const result = evaluateExpression(
       expr,
-      { addr: { col: 0, row: 0, }, callTree: ["root"] },
+      { addr: { col: 0, row: 0 }, callTree: ["root"] },
       (fName) =>
         ({
           map: createTemplaterFunction(
