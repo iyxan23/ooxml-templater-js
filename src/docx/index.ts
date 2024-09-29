@@ -7,7 +7,6 @@ import {
 import { BlobReader, BlobWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { docxClosingTags } from "./docx-closing-tags-list";
 import { startVisiting } from "../visitor-editor";
-import { collectBodyElements, rebuildBodyElements } from "./doc-elements";
 import { DocAddr, performDocumentTemplating } from "./doc-templater";
 import { Result, success } from "../result";
 
@@ -91,12 +90,9 @@ function templateDocument(xml: any, input: any): Result<any, DocAddr> {
   const body = getBody(xml);
   if (!body) return xml;
 
-  const items = collectBodyElements(body);
-  const templatedItems = performDocumentTemplating(items, input);
-
+  const templatedItems = performDocumentTemplating(body, input);
   if (templatedItems.status === "failed") return templatedItems;
-
-  const newBodyItems = rebuildBodyElements(templatedItems.result);
+  const newBodyItems = templatedItems.result;
 
   return success(
     startVisiting(xml, {
