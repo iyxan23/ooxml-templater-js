@@ -2,6 +2,7 @@ import { Result, success } from "../../result";
 import { TemplaterFunction } from "../../expression/evaluate";
 import { DocAddr } from "../doc-templater";
 import { ParagraphElement } from "./paragraph";
+import { TableElement } from "./table";
 
 export interface BodyElement {
   expand(
@@ -39,6 +40,9 @@ const elements: Record<string, { parse: (obj: any) => BodyElement }> = {
   "w:p": {
     parse: (obj) => new ParagraphElement(obj),
   },
+  "w:tbl": {
+    parse: (obj) => new TableElement(obj),
+  }
 };
 
 export function parseElements(document: any[]): BodyElement[] {
