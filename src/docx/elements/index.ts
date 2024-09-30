@@ -1,28 +1,34 @@
+import { Result, success } from "../../result";
 import { TemplaterFunction } from "../../expression/evaluate";
 import { DocAddr } from "../doc-templater";
 import { ParagraphElement } from "./paragraph";
 
 export interface BodyElement {
   expand(
-    context: { addr: DocAddr, callTree: string[] },
+    context: { addr: DocAddr; callTree: string[] },
     getVariable: (name: string) => any,
     getFunction: (name: string) => TemplaterFunction<any, DocAddr> | undefined,
-  ): void;
+  ): Result<void, DocAddr>;
 
   evaluate(
-    context: { addr: DocAddr, callTree: string[] },
+    context: { addr: DocAddr; callTree: string[] },
     getVariable: (name: string) => any,
     getFunction: (name: string) => TemplaterFunction<any, DocAddr> | undefined,
-  ): void;
+  ): Result<void, DocAddr>;
 
   rebuild(): any[];
 }
 
 class OtherElement implements BodyElement {
-  constructor(private obj: any) {}
+  constructor(private obj: any) { }
 
-  expand(): void {}
-  evaluate(): void {}
+  expand(): Result<void, DocAddr> {
+    return success(undefined);
+  }
+
+  evaluate(): Result<void, DocAddr> {
+    return success(undefined);
+  }
 
   rebuild(): any[] {
     return [this.obj];
