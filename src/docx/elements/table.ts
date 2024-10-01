@@ -1,7 +1,16 @@
-import { Result, success } from "../../result";
+import { Issue, Result, success } from "../../result";
 import { BodyElement } from ".";
 import { DocAddr } from "../doc-templater";
-import { startVisiting } from "src/visitor-editor";
+import { startVisiting } from "../../visitor-editor";
+import {
+  BasicExpressionsWithStaticTexts,
+  parseBasicExpressions,
+} from "../../expression/parser";
+import {
+  evaluateExpression,
+  TemplaterFunction,
+} from "../../expression/evaluate";
+import { isNumeric } from "../../utils";
 
 const W_TBL_PR = "w:tblPr";
 const W_TBL_GRID = "w:tblGrid";
@@ -32,8 +41,133 @@ export class TableElement implements BodyElement {
     }
   }
 
-  expand(): Result<void, DocAddr> {
-    return success(undefined);
+  expand(
+    context: {
+      addr: DocAddr;
+      callTree: string[];
+    },
+    getVariable: (name: string) => any,
+    getFunction: (name: string) => TemplaterFunction<any, DocAddr> | undefined,
+  ): Result<void, DocAddr> {
+    const issues: Issue<DocAddr>[] = [];
+    const repeatedRows: Record<
+      number,
+      { count: number; ident: string; start: number; end: number }[]
+    > = {};
+
+    for (let rowIdx = 0; rowIdx < this.rows.length; rowIdx++) {
+      const row = this.rows[rowIdx]!;
+      let currentRepeatRow: {
+        col: number;
+        count: number;
+        ident: string;
+      } | null = null;
+
+      cell: for (let col = 0; col < row.cells.length; col++) {
+        const cell = row.cells[col]!;
+
+        expr: for (let i = 0; i < cell.parsedExpr.length; i++) {
+          const item = cell.parsedExpr[i];
+          if (typeof item !== "object" || item.type !== "specialCall")
+            continue expr;
+
+          if (item.code !== "r" || item.identifier !== "repeatRow") {
+            issues.push({
+              message: `Unknown special call [${item.code}#${item.identifier}]`,
+              addr: context.addr,
+            });
+
+            continue expr;
+          }
+
+          if (item.closing) {
+            if (!currentRepeatRow) {
+              issues.push({
+                message: `closing [/r#repeatRow] with no opening`,
+                addr: context.addr,
+              });
+
+              continue expr;
+            }
+
+            // complete, opening closed
+            if (repeatedRows[rowIdx] == undefined) repeatedRows[rowIdx] = [];
+
+            repeatedRows[rowIdx]!.push({
+              count: currentRepeatRow.count,
+              ident: currentRepeatRow.ident,
+              start: currentRepeatRow.col,
+              end: col,
+            });
+
+            currentRepeatRow = null;
+
+            continue expr;
+          } else {
+            if (!!currentRepeatRow) {
+              // opening with already opened
+              issues.push({
+                message: `r#repeatRow cannot be used more than once on the same row at row ${rowIdx}`,
+                addr: context.addr,
+              });
+
+              continue expr;
+            }
+          }
+
+          const repeatLineCountArg = item.args[0];
+          const repeatLineIdxArg = item.args[1];
+
+          let repeatLineCount;
+          if (typeof repeatLineCountArg !== "string") {
+            const evalResult = evaluateExpression<DocAddr>(
+              item,
+              context,
+              getFunction,
+              getVariable,
+            );
+
+            if (evalResult.status === "failed") return evalResult;
+            issues.push(...evalResult.issues);
+
+            repeatLineCount = evalResult.result;
+          }
+
+          if (
+            typeof repeatLineCount === "string" &&
+            isNumeric(repeatLineCount)
+          ) {
+            repeatLineCount = Number(repeatLineCount);
+          } else {
+            issues.push({
+              message: `invalid first argument of l#repeatLine: ${repeatLineCountArg} (must be a number, or evaluate to a number)`,
+              addr: context.addr,
+            });
+
+            continue expr;
+          }
+
+          if (typeof repeatLineIdxArg !== "string") {
+            issues.push({
+              message: `invalid second argument of l#repeatLine: ${repeatLineIdxArg} (must be a text for identifier)`,
+              addr: context.addr,
+            });
+
+            continue expr;
+          }
+
+          currentRepeatRow = {
+            col,
+            count: repeatLineCount,
+            ident: repeatLineIdxArg,
+          };
+        }
+      }
+    }
+
+    // todo: expand from repeatRows
+
+    return success(undefined, issues);
   }
 
   evaluate(): Result<void, DocAddr> {
@@ -73,6 +207,7 @@ class TableRow {
 class TableCell {
   public w: number;
   private textPath: string[] | null;
+  public parsedExpr: BasicExpressionsWithStaticTexts;
 
   constructor(private raw: any) {
     let w;
@@ -110,6 +245,44 @@ class TableCell {
     });
 
     this.textPath = textPath ?? null;
+    this.parsedExpr = parseBasicExpressions(
+      textPath ? raw[textPath[0]]["#text"] : null,
+    );
+  }
+
+  evaluateAndSet(
+    context: {
+      addr: DocAddr;
+      callTree: string[];
+    },
+    getVariable: (name: string) => any,
+    getFunction: (name: string) => TemplaterFunction<any, DocAddr> | undefined,
+  ): Result<void, DocAddr> {
+    let result = "";
+    const issues: Issue<DocAddr>[] = [];
+
+    for (const item of this.parsedExpr) {
+      if (typeof item === "string") {
+        result += item;
+        continue;
+      }
+
+      const evalResult = evaluateExpression<DocAddr>(
+        item,
+        context,
+        getFunction,
+        getVariable,
+      );
+
+      if (evalResult.status === "failed") return evalResult;
+      issues.push(...evalResult.issues);
+
+      result += evalResult.result;
+    }
+
+    this.text = result;
+
+    return success(undefined, issues);
   }
 
   get text(): string | null {
