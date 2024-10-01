@@ -63,8 +63,10 @@ export class TableElement implements BodyElement {
         ident: string;
       } | null = null;
 
-      for (let col = 0; col < row.cells.length; col++) {
+      cell: for (let col = 0; col < row.cells.length; col++) {
         const cell = row.cells[col]!;
+
+        if (!cell.parsedExpr) continue cell;
 
         expr: for (let i = 0; i < cell.parsedExpr.length; i++) {
           const item = cell.parsedExpr[i];
@@ -225,7 +227,7 @@ class TableRow {
     }
   }
 
-  rebuild(): any[] {
+  rebuild(): any {
     return [...this.cells.map((c) => ({ "w:tc": c.rebuild() })), ...this.other];
   }
 }
@@ -233,7 +235,7 @@ class TableRow {
 class TableCell {
   public w: number;
   private textPath: string[] | null;
-  public parsedExpr: BasicExpressionsWithStaticTexts;
+  public parsedExpr: BasicExpressionsWithStaticTexts | null;
 
   constructor(private raw: any) {
     let w;
@@ -245,7 +247,7 @@ class TableCell {
         for (const tcPrItem of tcPr) {
           const tcPrItemKeys = Object.keys(tcPrItem);
           if (tcPrItemKeys.includes("w:tcW")) {
-            w = parseInt(tcPrItem["w:tcW"][":@"]["@_w:w"]);
+            w = parseInt(tcPrItem[":@"]["@_w:w"]);
           }
         }
       }
@@ -271,9 +273,7 @@ class TableCell {
     });
 
     this.textPath = textPath ?? null;
-    this.parsedExpr = parseBasicExpressions(
-      textPath ? raw[textPath[0]]["#text"] : null,
-    );
+    this.parsedExpr = this.text ? parseBasicExpressions(this.text) : null;
   }
 
   evaluateAndSet(
@@ -284,6 +284,8 @@ class TableCell {
     getVariable: (name: string) => any,
     getFunction: (name: string) => TemplaterFunction<any, DocAddr> | undefined,
   ): Result<void, DocAddr> {
+    if (!this.parsedExpr) return success(undefined);
+
     let result = "";
     const issues: Issue<DocAddr>[] = [];
 
@@ -331,7 +333,7 @@ class TableCell {
     textNode["#text"] = newText;
   }
 
-  rebuild(): any[] {
+  rebuild(): any {
     return this.raw;
   }
 }
