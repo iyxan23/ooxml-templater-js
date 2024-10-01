@@ -8,12 +8,15 @@ import { BlobReader, BlobWriter, ZipReader, ZipWriter } from "@zip.js/zip.js";
 import { docxClosingTags } from "./docx-closing-tags-list";
 import { startVisiting } from "../visitor-editor";
 import { DocAddr, performDocumentTemplating } from "./doc-templater";
-import { Result, success } from "../result";
+import { Issue, Result, success } from "../result";
 
 export async function docxFillTemplate(
   docx: ReadableStream,
   output: WritableStream,
   input: any,
+  opts: {
+    onError?: (error: Issue<DocAddr>, issues: Issue<DocAddr>[]) => void;
+  },
 ) {
   const zipWriter = new ZipWriter(output);
   const zipReader = new ZipReader(docx);
@@ -53,8 +56,19 @@ export async function docxFillTemplate(
 
       const result = templateDocument(doc, input);
 
+      if (result.status === "failed") {
+        opts.onError?.(result.error, result.issues);
+
+        await zipWriter.add(
+          entry.filename,
+          new BlobReader(new Blob([data], { type: "text/xml" })),
+        );
+
+        continue;
+      }
+
       const builder = new XMLBuilder(options);
-      const newDoc: string = builder.build(result);
+      const newDoc: string = builder.build(result.result);
 
       await zipWriter.add(
         entry.filename,
@@ -101,6 +115,6 @@ function templateDocument(xml: any, input: any): Result<any, DocAddr> {
         "w:body": [() => ({ newObj: newBodyItems })],
       },
     }),
-    templatedItems.issues
+    templatedItems.issues,
   );
 }
