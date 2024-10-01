@@ -346,7 +346,7 @@ class GridCols {
     for (const node of rawTblGrid) {
       const keys = Object.keys(node);
       if (keys.includes("w:gridCol")) {
-        this.cols.push(new GridCol(node["w:gridCol"]));
+        this.cols.push(new GridCol(node));
       } else {
         this.other.push(node);
       }
@@ -385,7 +385,7 @@ class GridCol {
 
   rebuild(): any {
     const cloned = structuredClone(this.rawGridCol);
-    cloned[":w"]["@_w:w"] = this.w.toString();
+    cloned[":@"]["@_w:w"] = this.w.toString();
 
     return cloned;
   }
