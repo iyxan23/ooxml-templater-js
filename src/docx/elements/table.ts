@@ -63,7 +63,7 @@ export class TableElement implements BodyElement {
         ident: string;
       } | null = null;
 
-      cell: for (let col = 0; col < row.cells.length; col++) {
+      for (let col = 0; col < row.cells.length; col++) {
         const cell = row.cells[col]!;
 
         expr: for (let i = 0; i < cell.parsedExpr.length; i++) {
@@ -165,13 +165,39 @@ export class TableElement implements BodyElement {
       }
     }
 
-    // todo: expand from repeatRows
+    for (const [rowKey, repeatRow] of Object.entries(repeatedRows)) {
+      const rowNum = Number(rowKey);
+      for (const r of repeatRow) {
+        const row = this.rows[rowNum]!.cells.slice(r.start, r.end);
+        const clonedRow = row.map((c) => new TableRow(c.rebuild()));
+        this.rows.splice(rowNum, 0, ...clonedRow);
+      }
+    }
 
     return success(undefined, issues);
   }
 
-  evaluate(): Result<void, DocAddr> {
-    return success(undefined);
+  evaluate(
+    context: { addr: DocAddr; callTree: string[] },
+    getVariable: (name: string) => any,
+    getFunction: (name: string) => TemplaterFunction<any, DocAddr> | undefined,
+  ): Result<void, DocAddr> {
+    const issues: Issue<DocAddr>[] = [];
+
+    for (const row of this.rows) {
+      for (const cell of row.cells) {
+        const evalResult = cell.evaluateAndSet(
+          context,
+          getFunction,
+          getVariable,
+        );
+
+        if (evalResult.status === "failed") return evalResult;
+        issues.push(...evalResult.issues);
+      }
+    }
+
+    return success(undefined, issues);
   }
 
   rebuild(): any[] {
