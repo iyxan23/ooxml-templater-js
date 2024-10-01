@@ -204,10 +204,14 @@ export class TableElement implements BodyElement {
 
   rebuild(): any[] {
     return [
-      this.tblPr ? { [W_TBL_PR]: this.tblPr } : {},
-      this.tblGrid ? { [W_TBL_GRID]: this.tblGrid.rebuild() } : {},
-      ...this.rows,
-      ...this.other,
+      {
+        "w:tbl": [
+          this.tblPr ? { [W_TBL_PR]: this.tblPr } : {},
+          this.tblGrid ? { [W_TBL_GRID]: this.tblGrid.rebuild() } : {},
+          ...this.rows.map((r) => ({ [W_TR]: r.rebuild() })),
+          ...this.other,
+        ],
+      },
     ];
   }
 }

@@ -227,7 +227,7 @@ export class ParagraphElement implements BodyElement {
 
   rebuild(): any[] {
     if (this.textData) {
-      let theObj = this.obj;
+      let theObj = this.obj as any;
       for (const p of this.textData.textPath) theObj = theObj[p];
 
       theObj["#text"] =
@@ -236,6 +236,6 @@ export class ParagraphElement implements BodyElement {
           : this.textData.text;
     }
 
-    return [this.obj, ...(this.clones?.paragraphs ?? [])];
+    return [{ "w:p": this.obj }, ...(this.clones?.paragraphs ?? [])];
   }
 }
