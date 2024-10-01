@@ -220,7 +220,7 @@ class TableRow {
     for (const node of rawTr) {
       const keys = Object.keys(node);
       if (keys.includes("w:tc")) {
-        this.cells.push(node["w:tc"]);
+        this.cells.push(new TableCell(node["w:tc"]));
       } else {
         this.other.push(node);
       }
