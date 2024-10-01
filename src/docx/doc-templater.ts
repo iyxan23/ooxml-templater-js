@@ -1,4 +1,4 @@
-import { parseElements } from "./elements";
+import { parseElements, rebuildElements } from "./elements";
 import { Issue, Result, success } from "../result";
 import { TemplaterFunction } from "../expression/evaluate";
 import { getBuiltinFunctions } from "../expression/function/builtin";
@@ -49,5 +49,5 @@ export function performDocumentTemplating(
     issues.push(...evalResult.issues);
   }
 
-  return success(bodyElements.map((elem) => elem.rebuild()).flat(), issues);
+  return success(rebuildElements(bodyElements), issues);
 }

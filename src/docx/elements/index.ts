@@ -65,3 +65,7 @@ export function parseElements(document: any[]): BodyElement[] {
 
   return result;
 }
+
+export function rebuildElements(elements: BodyElement[]): any[] {
+  return elements.map((element) => element.rebuild()).flat();
+}
