@@ -56,13 +56,15 @@ type CanBeSpread<T> = { spread: boolean; data: T };
 function evaluateExpressionInternal<Addr>(
   item: BasicExpression,
   context: { addr: Addr; callTree: string[] },
-  lookupFunction: (funcName: string) => TemplaterFunction<any, Addr> | undefined,
+  lookupFunction: (
+    funcName: string,
+  ) => TemplaterFunction<any, Addr> | undefined,
   lookupVariable: (name: string) => any | undefined,
 ): Result<CanBeSpread<any | undefined>, Addr> {
   if (item.type == "specialCall") {
     console.warn(
       `at addr ${context.addr}, special call is not supposed` +
-      ` to be in the evaluation stage.`,
+        ` to be in the evaluation stage.`,
     );
 
     return success({ spread: false, data: undefined }, [
@@ -70,7 +72,7 @@ function evaluateExpressionInternal<Addr>(
         addr: context.addr,
         message:
           `expressions of type specialCall is not supposed to be` +
-          ` in the evaluation stage.`,
+          ` in the evaluation stage: [${item.closing ? "/" : ""}${item.code}#${item.identifier}]`,
       },
     ]);
   }
