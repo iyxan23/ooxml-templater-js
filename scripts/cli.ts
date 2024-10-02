@@ -35,6 +35,20 @@ async function main() {
       Readable.toWeb(inputFileReadStream) as ReadableStream,
       Writable.toWeb(outputFileWriteStream) as WritableStream,
       input,
+      {
+        onFinished: (status) => {
+          console.log("document templated, additional info:");
+          console.log(` * status: ${status.status}`);
+          if (status.status === "failed")
+            console.log(
+              ` * error (at ${status.error.addr}): ${status.error.message}`,
+            );
+          console.log(" * issues:")
+          for (const issue of status.issues) {
+            console.log(`   - at ${issue.addr}: ${issue.message}`);
+          }
+        },
+      },
     );
   } else {
     await xlsxFillTemplate(
@@ -43,7 +57,7 @@ async function main() {
       input,
       {
         onSheetFinished: (status) => {
-          console.log("sheet finished templated, additional info:");
+          console.log("sheet templated, additional info:");
           console.log(JSON.stringify(status));
         },
       },

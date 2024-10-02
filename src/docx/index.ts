@@ -10,12 +10,23 @@ import { startVisiting } from "../visitor-editor";
 import { DocAddr, performDocumentTemplating } from "./doc-templater";
 import { Issue, Result, success } from "../result";
 
+export type DocxFinishedStatus =
+  | {
+      status: "success";
+      issues: Issue<DocAddr>[];
+    }
+  | {
+      status: "failed";
+      error: Issue<DocAddr>;
+      issues: Issue<DocAddr>[];
+    };
+
 export async function docxFillTemplate(
   docx: ReadableStream,
   output: WritableStream,
   input: any,
-  opts: {
-    onError?: (error: Issue<DocAddr>, issues: Issue<DocAddr>[]) => void;
+  opts?: {
+    onFinished?: (status: DocxFinishedStatus) => void;
   },
 ) {
   const zipWriter = new ZipWriter(output);
@@ -57,7 +68,11 @@ export async function docxFillTemplate(
       const result = templateDocument(doc, input);
 
       if (result.status === "failed") {
-        opts.onError?.(result.error, result.issues);
+        opts?.onFinished?.({
+          status: "failed",
+          error: result.error,
+          issues: result.issues,
+        });
 
         await zipWriter.add(
           entry.filename,
@@ -66,6 +81,11 @@ export async function docxFillTemplate(
 
         continue;
       }
+
+      opts?.onFinished?.({
+        status: "success",
+        issues: result.issues,
+      });
 
       const builder = new XMLBuilder(options);
       const newDoc: string = builder.build(result.result);
