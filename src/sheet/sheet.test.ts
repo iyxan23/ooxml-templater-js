@@ -685,6 +685,25 @@ describe("sheet tests", () => {
     expect(sheet.getWholeRow({ row: 2 })).toEqual([7, 14, 15, 10]);
   });
 
+  it("deletes whole row and fill from row", () => {
+    const sheet = new Sheet<number>([
+      [1, 2, 3, 8],
+      [4, 5, null, null],
+      [7, null, 9, 10],
+      [10, 11, 12, 3],
+      [null, 14, 15, 2],
+    ]);
+
+    sheet.deleteBlock({
+      start: { row: 1, col: 0 },
+      end: { row: 1 },
+      fillFrom: "row",
+    });
+
+    expect(sheet.getWholeRow({ row: 1 })).toEqual([7, null, 9, 10]);
+    expect(sheet.getWholeRow({ row: 2 })).toEqual([10, 11, 12, 3]);
+  });
+
   it("deletes a block without filling", () => {
     const sheet = new Sheet<number>([
       [1, 2, 3, 8],

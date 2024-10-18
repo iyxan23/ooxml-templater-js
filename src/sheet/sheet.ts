@@ -261,14 +261,19 @@ export class Sheet<T> {
     fillFrom,
   }: {
     start: { col: number; row: number };
-    end: { col: number; row: number };
+    end: { col?: number; row?: number };
     fillFrom: "col" | "row" | null;
   }) {
-    const width = end.col - start.col + 1;
-    const height = end.row - start.row + 1;
+    const bounds = this.getBounds();
 
-    for (let row = start.row; row <= end.row; row++) {
-      for (let col = start.col; col <= end.col; col++) {
+    const endCol = end.col ?? bounds.colBound + 1;
+    const endRow = end.row ?? bounds.rowBound + 1;
+
+    const width = endCol - start.col + 1;
+    const height = endRow - start.row + 1;
+
+    for (let row = start.row; row <= endRow; row++) {
+      for (let col = start.col; col <= endCol; col++) {
         this.setCell(col, row, null);
       }
     }
