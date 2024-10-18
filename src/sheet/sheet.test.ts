@@ -646,4 +646,61 @@ describe("sheet tests", () => {
 
     expect(sheet.getWholeRow({ row: 3 })).toEqual([10, 12, 3, null]);
   });
+
+  it("deletes a block and fill from col", () => {
+    const sheet = new Sheet<number>([
+      [1, 2, 3, 8],
+      [4, 5, null, null],
+      [7, null, 9, 10],
+      [10, 11, 12, 3],
+      [null, 14, 15, 2],
+    ]);
+
+    sheet.deleteBlock({
+      start: { row: 1, col: 1 },
+      end: { row: 2, col: 2 },
+      fillFrom: "col",
+    });
+
+    expect(sheet.getWholeRow({ row: 1 })).toEqual([4, null, null, null]);
+    expect(sheet.getWholeRow({ row: 2 })).toEqual([7, 10, null, null]);
+  });
+
+  it("deletes a block and fill from row", () => {
+    const sheet = new Sheet<number>([
+      [1, 2, 3, 8],
+      [4, 5, null, null],
+      [7, null, 9, 10],
+      [10, 11, 12, 3],
+      [null, 14, 15, 2],
+    ]);
+
+    sheet.deleteBlock({
+      start: { row: 1, col: 1 },
+      end: { row: 2, col: 2 },
+      fillFrom: "row",
+    });
+
+    expect(sheet.getWholeRow({ row: 1 })).toEqual([4, 11, 12, null]);
+    expect(sheet.getWholeRow({ row: 2 })).toEqual([7, 14, 15, 10]);
+  });
+
+  it("deletes a block without filling", () => {
+    const sheet = new Sheet<number>([
+      [1, 2, 3, 8],
+      [4, 5, null, null],
+      [7, null, 9, 10],
+      [10, 11, 12, 3],
+      [null, 14, 15, 2],
+    ]);
+
+    sheet.deleteBlock({
+      start: { row: 1, col: 1 },
+      end: { row: 2, col: 2 },
+      fillFrom: null,
+    });
+
+    expect(sheet.getWholeRow({ row: 1 })).toEqual([4, null, null, null]);
+    expect(sheet.getWholeRow({ row: 2 })).toEqual([7, null, null, 10]);
+  });
 });

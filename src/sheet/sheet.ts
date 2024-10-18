@@ -255,6 +255,41 @@ export class Sheet<T> {
     this.moveBlock({ colStart: col + 1, rowStart: 0 }, { col: col });
   }
 
+  deleteBlock({
+    start,
+    end,
+    fillFrom,
+  }: {
+    start: { col: number; row: number };
+    end: { col: number; row: number };
+    fillFrom: "col" | "row" | null;
+  }) {
+    const width = end.col - start.col + 1;
+    const height = end.row - start.row + 1;
+
+    for (let row = start.row; row <= end.row; row++) {
+      for (let col = start.col; col <= end.col; col++) {
+        this.setCell(col, row, null);
+      }
+    }
+
+    if (fillFrom === "col") {
+      this.moveBlock(
+        { colStart: start.col + width, rowStart: start.row, rowEnd: end.row },
+        { col: start.col, row: start.row },
+      );
+    } else if (fillFrom === "row") {
+      this.moveBlock(
+        {
+          rowStart: start.row + height,
+          colStart: start.col,
+          colEnd: end.col,
+        },
+        { row: start.row, col: start.col },
+      );
+    }
+  }
+
   // todo: faster method by moving a big block at the start, then actually
   // clone them one-by-one without insertMapAfterCol
   cloneMapCol({
