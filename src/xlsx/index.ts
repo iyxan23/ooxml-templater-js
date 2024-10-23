@@ -321,7 +321,30 @@ class XlsxTemplater {
   ): Promise<any> {
     const rows: Record<number, { c: any[] | any } & any> = {};
 
-    const { rowBound, colBound } = sheetData.getBounds();
+    const { rowBound: sheetRowBound, colBound: sheetColBound } =
+      sheetData.getBounds();
+
+    const rowInfoMax = Object.keys(rowInfo).reduce<number | null>(
+      (a, b) => Math.max(a ?? 0, parseInt(b ?? "0")),
+      null,
+    );
+    const colInfoMax = Object.keys(colInfo).reduce<number | null>(
+      (a, b) => Math.max(a ?? 0, parseInt(b ?? "0")),
+      null,
+    );
+
+    const rowBound = rowInfoMax
+      ? sheetRowBound < rowInfoMax
+        ? rowInfoMax
+        : sheetRowBound
+      : sheetRowBound;
+
+    const colBound = colInfoMax
+      ? sheetColBound < colInfoMax
+        ? colInfoMax
+        : sheetColBound
+      : sheetColBound;
+
     sheetData.optimizeSheet({ rowBound, colBound });
 
     for (let r = 0; r <= rowBound; r++) {
@@ -342,10 +365,9 @@ class XlsxTemplater {
       after: {
         dimension: [
           () => {
-            const bounds = sheetData.getBounds();
             const dimension = createAddressNumber(
-              bounds.colBound,
-              bounds.rowBound,
+              Math.max(colBound, 0),
+              Math.max(rowBound, 0),
             );
 
             return {
@@ -508,10 +530,10 @@ class XlsxTemplater {
                 newObj:
                   obj["@_t"] === "s" && isNumeric(obj["v"])
                     ? {
-                        ...obj,
-                        v: this.sharedStrings[parseInt(obj["v"])],
-                        "@_t": "str",
-                      }
+                      ...obj,
+                      v: this.sharedStrings[parseInt(obj["v"])],
+                      "@_t": "str",
+                    }
                     : { ...obj },
               };
             }
@@ -522,10 +544,10 @@ class XlsxTemplater {
               newObj: obj.map((o) =>
                 o["@_t"] === "s" && isNumeric(o["v"])
                   ? {
-                      ...o,
-                      v: this.sharedStrings[parseInt(o["v"])],
-                      "@_t": "str",
-                    }
+                    ...o,
+                    v: this.sharedStrings[parseInt(o["v"])],
+                    "@_t": "str",
+                  }
                   : { ...o },
               ),
             };
@@ -557,7 +579,9 @@ function parseAddressNumber(address: string): { row: number; col: number } {
 
 function createAddressNumber(col: number, row: number): `${string}${number}` {
   if (col < 0 || row < 0) {
-    throw new Error("Column and row must be non-negative.");
+    throw new Error(
+      `Column and row must be non-negative; col: ${col}, row: ${row}`,
+    );
   }
 
   const oneIndexedRow = row + 1;
