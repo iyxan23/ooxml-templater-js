@@ -35,19 +35,19 @@ export type SheetAddr = { col: number; row: number };
 type SheetShiftListener = (
   shift:
     | {
-      direction: "row";
-      row: number;
-      amount: number;
-      colStart: number;
-      colEnd: number;
-    }
+        direction: "row";
+        row: number;
+        amount: number;
+        colStart: number;
+        colEnd: number;
+      }
     | {
-      direction: "col";
-      col: number;
-      amount: number;
-      rowStart: number;
-      rowEnd: number;
-    },
+        direction: "col";
+        col: number;
+        amount: number;
+        rowStart: number;
+        rowEnd: number;
+      },
 ) => void;
 
 class SheetShiftEmitter {
@@ -120,7 +120,7 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       if (sheetCell === null) {
         throw new Error(
           `fatal: cannot find the cell referenced by variable hoist on` +
-          ` col ${col} row ${row}`,
+            ` col ${col} row ${row}`,
         );
       }
 
@@ -128,18 +128,18 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         typeof expr === "string"
           ? success<string, SheetAddr>(expr)
           : evaluateExpression<SheetAddr>(
-            expr,
-            {
-              addr: {
-                col,
-                row,
+              expr,
+              {
+                addr: {
+                  col,
+                  row,
+                },
+                callTree: [`hoisted variable \`${identifier}\``],
               },
-              callTree: [`hoisted variable \`${identifier}\``],
-            },
-            (funcName) => this.functions[funcName],
-            (variableName) =>
-              globalVariables[variableName] ?? data[variableName],
-          );
+              (funcName) => this.functions[funcName],
+              (variableName) =>
+                globalVariables[variableName] ?? data[variableName],
+            );
 
       issues.push(...result.issues);
 
@@ -301,6 +301,23 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
         const ident = block.indexVariableIdentifier;
         const row = block.start.row;
 
+        if (repeatAmount === 0) {
+          // delete the row
+          sheet.deleteBlock({
+            start: {
+              col: block.start.col,
+              row: block.start.row,
+            },
+            end: {
+              col: block.end.col,
+              row: block.end.row,
+            },
+            fillFrom: "row",
+          });
+
+          continue;
+        }
+
         // first row
         for (let col = block.start.col; col < block.end.col + 1; col++) {
           setLocalVariables(col, row, { [ident]: 0 });
@@ -327,6 +344,23 @@ export class SheetTemplater<SheetT extends TemplatableCell> {
       } else if (block.identifier === "repeatCol") {
         const ident = block.indexVariableIdentifier;
         const col = block.start.col;
+
+        if (repeatAmount === 0) {
+          // delete the col
+          sheet.deleteBlock({
+            start: {
+              col: block.start.col,
+              row: block.start.row,
+            },
+            end: {
+              col: block.end.col,
+              row: block.end.row,
+            },
+            fillFrom: "col",
+          });
+
+          continue;
+        }
 
         // first col
         for (let row = block.start.row; row < block.end.row + 1; row++) {
